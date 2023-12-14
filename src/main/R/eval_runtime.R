@@ -3,34 +3,26 @@ library(tidyverse)
 # json library recommendet by tidyverse https://cran.r-project.org/web/packages/jsonlite/vignettes/json-aaquickstart.html
 library(jsonlite)
 
-trace_dirs <- function(root) {
-  sub_dirs <- list.dirs(root)
-  trace_directories <- sub_dirs[grep("/trace$", sub_dirs)]
-  return(trace_directories)
-}
-
-trace_files <- function(trace_dirs) {
-
-  result <- list()
-
-  for (dir in trace_dirs) {
-    parent_dir <- basename(dirname(dir))
-    trace_files <- list.files(dir)
-    ###}
-    result[[parent_dir]] <- trace_files
-  }
-  return(result)
-}
-
-paths <- trace_dirs("/Users/janek/Documents/equil-output")
-files <- trace_files(paths)
+source("./src/main/R/colors.R")
+source("./src/main/R/parsing.R")
+source("./src/main/R/tracing.R")
 
 
+traces <- load_traces("/Users/janek/Documents/equil-output")
+times <- traces %>%
+  mutate(func = paste(target, name, sep = "::")) %>%
+  mutate(size = str_extract(dir, "\\d+")) %>%
+  mutate(busy = parse_duration(time.busy)) %>%
+  mutate(idle = parse_duration(time.idle)) %>%
+  select(size, func, busy, busy, idle)
 
-ndjson <- jsonlite::stream_in(file("/Users/janek/Documents/equil-output/output-3/trace/trace_process_0.txt"))
+run_times <- times %>%
+  filter(func == "rust_q_sim::simulation::simulation::run")
 
-p <- ggplot(ndjson, aes(x = factor(target), y = fields$time.busy)) +
-  geom_point() +
+a <- blue_to_red()
+
+p <- ggplot(run_times, aes(x = size, y = busy)) +
+  geom_boxplot(color = blue(), fill = gray()) +
   theme_light()
 p
 
