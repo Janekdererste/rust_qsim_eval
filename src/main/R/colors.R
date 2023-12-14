@@ -13,3 +13,10 @@ red <- function() {
 gray <- function() {
   "#f1f1f1"
 }
+
+theme <- function(ggplot_object) {
+  ggplot_object +
+    scale_fill_manual(values = blue_to_red()) +
+    scale_color_manual(values = blue_to_red()) +
+    theme_light()
+}

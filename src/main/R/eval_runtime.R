@@ -8,7 +8,7 @@ source("./src/main/R/parsing.R")
 source("./src/main/R/tracing.R")
 
 
-traces <- load_traces("/Users/janek/Documents/equil-output")
+traces <- load_traces("/Users/janek/Documents/rust_q_sim/berlin/output")
 times <- traces %>%
   mutate(func = paste(target, name, sep = "::")) %>%
   mutate(size = str_extract(dir, "\\d+")) %>%
