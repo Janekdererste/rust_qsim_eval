@@ -8,21 +8,17 @@ source("./src/main/R/parsing.R")
 source("./src/main/R/tracing.R")
 
 
-traces <- load_traces("/Users/janek/Documents/rust_q_sim/berlin/output")
-times <- traces %>%
-  mutate(func = paste(target, name, sep = "::")) %>%
-  mutate(size = str_extract(dir, "\\d+")) %>%
-  mutate(busy = parse_duration(time.busy)) %>%
-  mutate(idle = parse_duration(time.idle)) %>%
-  select(size, func, busy, busy, idle)
+traces <- load_csv_instrument("/Users/janek/Documents/rust_q_sim/equil/output", num_cores = 8)
+overall_run_time <- traces %>%
+  filter(func == "rust_q_sim::simulation::simulation::run") %>%
+  mutate (speedup = (1/duration) / (1/max(duration))) %>%
+  mutate(secs = duration / 1e9)
 
-run_times <- times %>%
-  filter(func == "rust_q_sim::simulation::simulation::run")
-
-a <- blue_to_red()
-
-p <- ggplot(run_times, aes(x = size, y = busy)) +
-  geom_boxplot(color = blue(), fill = gray()) +
+p <- ggplot(overall_run_time, aes(x = size, y = secs)) +
+  geom_point(color = blue()) +
+  stat_summary(fun = mean, color = blue(), geom = "line") +
   theme_light()
 p
+
+
 
