@@ -46,24 +46,51 @@ stream_json <- function(files) {
   return(result)
 }
 
-load_data <- function(files, num_cores) {
-  tibbles <- mclapply(files, function(entry){
+load_rust_data <- function(files, num_cores) {
+  tibbles <- lapply(files, function(entry){
+
+    file_path <- entry["file"]
+    print(paste("reading file: ", file_path))
+    if (!file.exists(file_path)) {
+      warning(paste("File does not exist:", file_path))
+      return(tibble())  # return an empty tibble if the file does not exist
+    }
 
     size <- as.numeric(str_extract(entry["dir"], "\\d+"))
-    file_data <- read_csv(entry["file"]) %>%
+    file_data <- read_csv(file_path) %>%
       mutate(size = size) %>%
       mutate(func = paste(target, func_name, sep = "::")) %>%
       select(timestamp, func, duration, rank, size)
+    return (file_data)
+  }) # mc.cores = num_cores, mc.preschedule = TRUE)
+  print(paste("Starting to bind ", length(tibbles), " tibbles"))
+  result <- bind_rows(tibbles)
+  return (result)
+}
+
+load_matsim_data <- function(files, num_cores) {
+  tibbles <- mclapply(files, function(file) {
+    if (!file.exists(file)) {
+      warning(paste("File does not exist: ", file))
+      return(tibble())
+    }
+
+    file_data <- read_csv(file)
     return (file_data)
   }, mc.cores = num_cores, mc.preschedule = TRUE)
   result <- bind_rows(tibbles)
   return (result)
 }
 
-load_csv_instrument <- function(root, num_cores = 1) {
+load_rust_tracing_data <- function(root, num_cores = 1) {
   dirs <- trace_dirs(root)
   files <- trace_files_in_folders(dirs)
-  data <- load_data(files, num_cores)
+  data <- load_rust_data(files, num_cores)
+}
+
+load_matsim_tracing_data <- function(root, trace_file_name, num_cores = 1) {
+  files <- list.files(path = root, pattern = "instrument-mobsim\\.csv$", recursive = TRUE, full.names = TRUE)
+  data <- load_matsim_data(files, num_cores)
 }
 
 load_json <- function(root) {
