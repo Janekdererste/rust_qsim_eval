@@ -6,8 +6,6 @@ neon <- function() {
   c(blue(),pink(),yellow(), green(), gray())
 }
 
-
-
 red <- function() {
   "#ff0060"
 }
