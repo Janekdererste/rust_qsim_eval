@@ -7,7 +7,7 @@ source("./src/main/R/colors.R")
 source("./src/main/R/parsing.R")
 source("./src/main/R/tracing.R")
 
-traces <- load_rust_tracing_data("/Users/janek/Cluster/pqsim_benchmark/berlin-v6.0-25pct/output", num_cores = 8)
+traces <- load_rust_tracing_data("/Users/janek/Cluster/pqsim_benchmark/rvr-v1.4-10pct/output", num_cores = 8)
 overall_run_time <- traces %>%
   filter(func == "rust_q_sim::simulation::simulation::run") %>%
   mutate (speedup = (1/duration) / (1/max(duration))) %>%
@@ -24,8 +24,11 @@ speedup_summary <- overall_run_time %>%
 p <- ggplot(duration_summary, aes(x = size, y = mean_duration)) +
   geom_line(color = pink()) +
   geom_point(color = pink()) +
+  scale_y_log10() +
+  scale_x_log10() +
   geom_text(aes(label = round(mean_duration, 1)), vjust = -0.5, hjust = -0.05) +
-  ggtitle("Overall Runtime [s]") +
+  xlab("Number of Cores") +
+  ggtitle("RVR-v1.4 10% Scenario - Overall Runtime [s] on 2 x 24-Core Epyc 7352") +
   theme_light()
 p
 
@@ -33,12 +36,13 @@ p <- ggplot(speedup_summary, aes(x = size, y = mean_speedup)) +
   geom_line(color = blue()) +
   geom_point(color = blue()) +
   geom_text(aes(label = round(mean_speedup, 1)), vjust = 1.5, hjust = -0.1) +
-  ggtitle("Overall Speedup") +
+  xlab("Number of Cores") +
+  ggtitle("RVR-v1.4 10% Scenario - Overall Speedup on 2 x 24-Core Epyc 7352") +
   theme_light()
 p
 
 #------------------------ Load matsim classic ---------------
-matsim_traces <- load_matsim_tracing_data("/Users/janek/Cluster/matsim-benchmark/output-25pct", num_cores = 8)
+matsim_traces <- load_matsim_tracing_data("/Users/janek/Cluster/matsim-benchmark/rvr-v1.4-10pct/output-10pct", num_cores = 8)
 matsim_traces <- matsim_traces %>%
   mutate(secs = duration / 1e9) %>%
   mutate(speedup = (1/duration) / (1/max(duration)))
@@ -47,7 +51,8 @@ p <- ggplot(matsim_traces, aes(x = size, y = secs)) +
   geom_line(color = blue()) +
   geom_point(color = blue()) +
   geom_text(aes(label = round(secs, 1)), vjust = -0.5, hjust = -0.05) +
-  ggtitle("Overall Runtime Java-Qsim [s]") +
+  xlab("Number of Cores") +
+  ggtitle("RVR-v1.4 10% Scenario - Overall Runtime Java-Qsim [s] on 2 x 24-Core Epyc 7352") +
   theme_light()
 p
 
@@ -67,7 +72,10 @@ joined <- matsim_durations %>%
 p <- ggplot(joined, aes(x = size, y = secs, color = name)) +
   geom_line() +
   geom_point() +
-  ggtitle("Runtimes matsim vs. rust (Berlin 25% 1 iteration - 2 x 24-Core Epyc 7352)") +
+  scale_y_log10() +  # Add this line for log scaling on the y-axis +
+  scale_x_log10() +
+  xlab("Number of Cores") +
+  ggtitle("RVR-v1.4 10% Scenario - Runtimes Java vs. Rust on 2 x 24-Core Epyc 7352") +
   theme_light() +
   scale_color_manual(values = neon())
 p
@@ -82,7 +90,8 @@ ratios <- joined %>%
 p <- ggplot(ratios, aes(x = size, y = ratio)) +
   geom_line(color = gray()) +
   geom_point(color = gray()) +
-  ggtitle("Runtime Ratio matsim vs. rust (Berlin 25% 1 iteration - 2 x 24-Core Epyc 7352)") +
+  xlab("Number of Cores") +
+  ggtitle("RVR-v1.4 10% Scenario - Speedup Rust vs. Java on 2 x 24-Core Epyc 7352)") +
   theme_light()
 p
 
