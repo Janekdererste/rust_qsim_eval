@@ -4,122 +4,142 @@ library(tidyverse)
 source("./src/main/R/tracing.R")
 source("./src/main/R/colors.R")
 
-traces_4 <- load_rust_tracing_data("/Users/janek/Documents/rust_q_sim/berlin/output-1pct/size-4", num_cores = 8)
-
-times <- traces_4 %>%
-  select(sim_time, rank, size, func, func_name, duration) %>%
-  filter(func == "rust_q_sim::simulation::network::sim_network::move_nodes" |
-           func == "rust_q_sim::simulation::network::sim_network::move_links" |
-           func == "rust_q_sim::simulation::messaging::communication::communicators::send_receive_vehicles" |
-           func == "rust_q_sim::simulation::messaging::communication::communicators::receive_msgs")
-
-p <- ggplot(data = times, aes(y = duration, x = factor(rank), fill = func_name)) +
-  ylim(0, 0.7e5) +
-  geom_boxplot(outlier.shape = NA) +
-  ggtitle("Execution times by partition.") +
-  xlab("Partition Rank") +
-  ylab("duration [ns]") +
-  scale_fill_manual(values = neon()) +
-  scale_color_manual(values = neon()) +
-  theme_light()
-p
-
-
 traces_combined <- load_rust_tracing_data("/Users/janek/Documents/rust_q_sim/berlin/output-1pct", num_cores = 8)
 
 main_functions <- traces_combined %>%
   filter(func == "rust_q_sim::simulation::network::sim_network::move_nodes" |
            func == "rust_q_sim::simulation::network::sim_network::move_links" |
-           func == "rust_q_sim::simulation::messaging::communication::communicators::receive_msgs")
+           func == "rust_q_sim::simulation::messaging::communication::communicators::handle_msgs" |
+           func == "rust_q_sim::simulation::messaging::communication::communicators::receive_msgs" |
+           func == "rust_q_sim::simulation::messaging::communication::communicators::send_msgs" |
+           func == "rust_q_sim::simulation::simulation::wakeup" |
+           func == "rust_q_sim::simulation::simulation::terminate_teleportation")
 
-medians <- main_functions %>%
+mean_timings <- main_functions %>%
   group_by(func_name, size) %>%
-  summarise(average_duration = mean(duration) / 1e3)
+  summarize(mean_dur = mean(duration))
 
-ggplot(main_functions, aes(factor(size), y = (duration / 1e3), fill = as.factor(func_name))) +
-  ylim(0, 500) +
-  xlab("Number of Cores") +
-  ylab("Median Duration [\u00B5s]") +
-  scale_fill_manual(values = neon()) +
-  theme_light() +
-  geom_boxplot()
-
-ggplot(medians, aes(x = factor(size), y = average_duration, fill = as.factor(func_name))) +
+ggplot(mean_timings, aes(x = factor(size), y = mean_dur / 1e3, fill = as.factor(func_name))) +
   geom_bar(stat = "identity", position = "stack") +
   xlab("Number of Cores") +
   ylab("Mean Duration [\u00B5s]") +
-  scale_fill_manual(values = neon()) +
+  ggtitle("Mean duration of performing one sim step") +
+  scale_fill_manual(values = qualitative()) +
   scale_color_manual(values = neon()) +
   theme_light()
 
-terminate_and_wakeup <- traces_combined %>%
+mean_sim_work <- traces_combined %>%
   filter(
-    func == "rust_q_sim::simulation::simulation::wakeup" |
-      func == "rust_q_sim::simulation::simulation::terminate_teleportation")
-
-medians_taw <- terminate_and_wakeup %>%
+    func == "rust_q_sim::simulation::network::sim_network::move_nodes" |
+      func == "rust_q_sim::simulation::network::sim_network::move_links" |
+      func == "rust_q_sim::simulation::simulation::wakeup" |
+      func == "rust_q_sim::simulation::simulation::terminate_teleportation"
+  ) %>%
   group_by(func_name, size) %>%
-  summarize(average_duration = median(duration))
+  summarize(mean_dur = mean(duration))
 
-ggplot(medians_taw, aes(x = factor(size), y = average_duration, fill = as.factor(func_name))) +
+ggplot(mean_sim_work, aes(x = factor(size), y = mean_dur / 1e3, fill = as.factor(func_name))) +
   geom_bar(stat = "identity", position = "stack") +
   xlab("Number of Cores") +
-  scale_fill_manual(values = neon()) +
+  ylab("Mean Duration [\u00B5s]") +
+  ggtitle("Mean duration of performing simulation Work per time step") +
+  scale_fill_manual(values = qualitative()) +
   scale_color_manual(values = neon()) +
   theme_light()
 
 
-#----------- Plot messaging times for one size configuration
-rcv_msgs <- traces_combined %>%
-  #filter(size == 12 | size size == 2) %>%
-  filter(func == "rust_q_sim::simulation::messaging::communication::communicators::receive_msgs") %>%
-  filter(sim_time != 0) %>%
-  mutate(time_bin = cut_width(sim_time, width = 1800, boundary = 1.)) %>%
-  group_by(time_bin, size, rank) %>%
-  summarize(m_dur = median(duration), .groups = 'drop')
+messaging <- traces_combined %>%
+  filter(
+    func == "rust_q_sim::simulation::messaging::communication::communicators::handle_msgs" |
+      func == "rust_q_sim::simulation::messaging::communication::communicators::receive_msgs" |
+      func == "rust_q_sim::simulation::messaging::communication::communicators::send_msgs")
 
-ggplot(rcv_msgs, aes(x = time_bin, y = m_dur / 1e3, group = rank, color = factor(rank), fill = factor(rank))) +
-  geom_line() +
-  facet_wrap(~size) +
-  scale_color_viridis_d(name = "Rank") +
-  scale_x_discrete(breaks = function(x) x[seq(1, length(x), by = 24)]) +  # Adjust 'by' as needed
-  xlab("Simulation Time") +
-  ylab("median duration [\u00B5s]") +
-  ggtitle("Execution Times for send_rcv_veh") +
+acc_messaging <- messaging %>%
+  group_by(func_name, size) %>%
+  summarize(avg_dur = median(duration))
+
+
+#----------- Plot times over sim time ---------
+
+receive_msg_data <- traces_combined %>%
+  filter(
+    func == "rust_q_sim::simulation::messaging::communication::communicators::handle_msgs" |
+      func == "rust_q_sim::simulation::messaging::communication::communicators::receive_msgs" |
+      func == "rust_q_sim::simulation::messaging::communication::communicators::send_msgs"
+  ) %>%
+  group_by(sim_time, size, func_name) %>%
+  summarize(diff_dur = max(duration) - min(duration))
+
+# I would like to plot the wait times together with a trend line but somehow I can't achieve this....
+ggplot(receive_msg_data, aes(x = sim_time, y = diff_dur / 1e3, color = as.factor(size))) +
+  geom_point(alpha = 0.1, shape = '.') +
+  geom_smooth() +
+  ylim(0, 1000) +
+  scale_color_manual(values = qualitative()) +
+  guides(color = guide_legend(override.aes = list(size = 4, alpha = 1.0, shape = 21))) +
   theme_light()
 
-move_nodes <- traces_combined %>%
-  #filter(size == 12 | size size == 2) %>%
-  filter(func == "rust_q_sim::simulation::network::sim_network::move_nodes") %>%
-  filter(sim_time != 0) %>%
-  mutate(time_bin = cut_width(sim_time, width = 1800, boundary = 1.)) %>%
-  group_by(time_bin, size, rank) %>%
-  summarize(m_dur = median(duration), .groups = 'drop')
+width <- 60
+mean_binned <- traces_combined %>%
+  filter(
+    func == "rust_q_sim::simulation::network::sim_network::move_nodes" |
+      func == "rust_q_sim::simulation::network::sim_network::move_links" |
+      func == "rust_q_sim::simulation::messaging::communication::communicators::handle_msgs" |
+      func == "rust_q_sim::simulation::messaging::communication::communicators::receive_msgs" |
+      func == "rust_q_sim::simulation::messaging::communication::communicators::send_msgs"
+  ) %>%
+  mutate(
+    time_bin = cut_width(sim_time, width = width, boundary = 0, closed = "left"),
+    bin_start = floor(sim_time / width) * width
+  ) %>%
+  group_by(bin_start, size, rank, func_name) %>%
+  # We summarize using median, because we have outliers in the data set. Here, we want to show
+  # that we structurally get closer to each other in execution time, if we put more cores onto the
+  # problem. The outliers should be investigated as well I guess.
+  summarize(median_dur = median(duration), .groups = 'drop')
 
-ggplot(move_nodes, aes(x = time_bin, y = m_dur / 1e3, group = rank, color = factor(rank), fill = factor(rank))) +
-  geom_line() +
-  facet_wrap(~size) +
-  scale_color_viridis_d(name = "Rank") +
-  scale_x_discrete(breaks = function(x) x[seq(1, length(x), by = 24)]) +  # Adjust 'by' as needed
-  xlab("Simulation Time") +
+receive_timing <- mean_binned %>%
+  filter(size > 1 & size <= 32) %>%
+  filter(func_name == "receive_msgs")
+
+ggplot(receive_timing, aes(x = bin_start, y = median_dur / 1e3, color = as.factor(rank))) +
+  geom_point(alpha = 0.3, shape = '.') +
+  geom_smooth(se = TRUE) +
+  facet_wrap(~size, scales = "free_y") +
+  ylim(0, 200) +
+  scale_color_manual(values = many()) +
+  guides(color = guide_legend(override.aes = list(size = 4, alpha = 1.0))) +
+  xlab("Simulation Time [s]") +
   ylab("median duration [\u00B5s]") +
-  ggtitle("Execution Times for network::move_nodes") +
+  ggtitle(paste("Median Execution Times for communicators::receive_msgs -", width, "sim. second bins")) +
   theme_light()
 
-move_links <- traces_combined %>%
-  #filter(size == 12 | size size == 2) %>%
-  filter(func == "rust_q_sim::simulation::network::sim_network::move_links") %>%
-  filter(sim_time != 0) %>%
-  mutate(time_bin = cut_width(sim_time, width = 1800, boundary = 1.)) %>%
-  group_by(time_bin, size, rank) %>%
-  summarize(m_dur = median(duration), .groups = 'drop')
 
-ggplot(move_links, aes(x = time_bin, y = m_dur / 1e3, group = rank, color = factor(rank), fill = factor(rank))) +
-  geom_line() +
+diff_receive_msg <- receive_timing %>%
+  filter(bin_start < max(bin_start)) %>%
+  group_by(bin_start, size) %>%
+  summarize(dur_span = max(median_dur) - min(median_dur))
+
+ggplot(diff_receive_msg, aes(x = bin_start, y = dur_span / 1e3, color = as.factor(size))) +
+  geom_point(alpha = 0.2, shape = '.') +
+  geom_smooth(se = TRUE) +
+  ylim(0, 200) +
+  scale_color_manual(values = many()) +
+  guides(color = guide_legend(override.aes = list(size = 4, alpha = 1.0))) +
+  theme_light()
+
+ggplot(diff_receive_msg, aes(x = bin_start, y = as.factor(size), fill = dur_span / 1e3)) +
+  geom_raster()
+
+move_links <- mean_binned %>%
+  filter(func_name == "move_links")
+
+ggplot(move_links, aes(x = bin_start, y = median_dur / 1e3, color = as.factor(rank))) +
+  geom_point(alpha = 0.5, size = 0.25) +
   facet_wrap(~size) +
-  scale_color_viridis_d(name = "Rank") +
-  scale_x_discrete(breaks = function(x) x[seq(1, length(x), by = 24)]) +  # Adjust 'by' as needed
-  xlab("Simulation Time") +
+  scale_color_manual(values = many()) +
+  guides(color = guide_legend(override.aes = list(size = 4, alpha = 1.0))) +
+  xlab("Simulation Time [s]") +
   ylab("median duration [\u00B5s]") +
-  ggtitle("Execution Times for network::move_links") +
+  ggtitle(paste("Median Execution Times for network::move_links -", width, "sim. second bins")) +
   theme_light()

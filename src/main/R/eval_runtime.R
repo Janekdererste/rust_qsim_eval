@@ -7,10 +7,10 @@ source("./src/main/R/colors.R")
 source("./src/main/R/parsing.R")
 source("./src/main/R/tracing.R")
 
-traces <- load_rust_tracing_data("/Users/janek/Cluster/pqsim_benchmark/rvr-v1.4-10pct/output", num_cores = 8)
+traces <- load_rust_tracing_data("/Users/janek/Documents/rust_q_sim/berlin/output-1pct", num_cores = 8)
 overall_run_time <- traces %>%
   filter(func == "rust_q_sim::simulation::simulation::run") %>%
-  mutate (speedup = (1/duration) / (1/max(duration))) %>%
+  mutate(speedup = (1 / duration) / (1 / max(duration))) %>%
   mutate(secs = duration / 1e9)
 
 duration_summary <- overall_run_time %>%
@@ -45,7 +45,7 @@ p
 matsim_traces <- load_matsim_tracing_data("/Users/janek/Cluster/matsim-benchmark/rvr-v1.4-10pct/output-10pct", num_cores = 8)
 matsim_traces <- matsim_traces %>%
   mutate(secs = duration / 1e9) %>%
-  mutate(speedup = (1/duration) / (1/max(duration)))
+  mutate(speedup = (1 / duration) / (1 / max(duration)))
 
 p <- ggplot(matsim_traces, aes(x = size, y = secs)) +
   geom_line(color = blue()) +

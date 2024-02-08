@@ -48,7 +48,7 @@ stream_json <- function(files) {
 
 load_rust_data <- function(files, num_cores) {
 
-  tibbles <- mclapply(files, function(entry) {
+  tibbles <- lapply(files, function(entry) {
 
     file_path <- entry["file"]
     print(paste("reading file: ", file_path))
@@ -68,14 +68,14 @@ load_rust_data <- function(files, num_cores) {
       mutate(size = size) %>%
       mutate(func = paste(target, func_name, sep = "::"))
     return(file_data)
-  }, mc.cores = num_cores, mc.preschedule = TRUE)
+  }) #, mc.cores = num_cores, mc.preschedule = TRUE)
   print(paste("Starting to bind ", length(tibbles), " tibbles"))
   result <- bind_rows(tibbles)
   return(result)
 }
 
 load_matsim_data <- function(files, num_cores) {
-  tibbles <- mclapply(files, function(file) {
+  tibbles <- lapply(files, function(file) {
     if (!file.exists(file)) {
       warning(paste("File does not exist: ", file))
       return(tibble())
@@ -83,7 +83,7 @@ load_matsim_data <- function(files, num_cores) {
 
     file_data <- read_csv(file)
     return(file_data)
-  }, mc.cores = num_cores, mc.preschedule = TRUE)
+  }) #, mc.cores = num_cores, mc.preschedule = TRUE)
   result <- bind_rows(tibbles)
   return(result)
 }
