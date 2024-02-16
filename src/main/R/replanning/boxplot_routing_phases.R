@@ -9,7 +9,6 @@ source("../tracing.R")
 source("routing_utils.R")
 
 get_label <- function(input_string) {
-  # Beispiel-String
   # Extrahiere den Substring nach dem letzten ::
   substring_after_last_double_colon <- sub(".+::([^:]+)$", "\\1", input_string)
 

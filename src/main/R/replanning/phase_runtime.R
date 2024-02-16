@@ -33,14 +33,8 @@ filter_and_plot <- function(data, func_filter, title_, x_axis, y_axis) {
     )
 }
 
-# traces <- load_csv_instrument("/Users/paulheinrich/math/perf_rust_qsim/berlin-1pct/output/size-2/", num_cores = 2, file_name_filter = c("0.csv"))
-
 traces <- load_csv_instrument("../../../../assets/hlrn-25",
                               num_cores = 16, file_name_filter = c("_0.csv"), node_count_filter = 256)
-
-COMMUNICATION_KEY <- "rust_q_sim::simulation::replanning::routing::travel_times_collecting_alt_router::communicate_travel_times"
-GATHER_LENGTHS_KEY <- "rust_q_sim::simulation::messaging::communication::communicators::gather_travel_time_lengths"
-GATHER_TT_KEY <- "rust_q_sim::simulation::messaging::communication::communicators::gather_travel_times_var_count"
 
 general_filter <- c(
                     # "rust_q_sim::simulation::messaging::communication::communicators::send_receive_vehicles",
