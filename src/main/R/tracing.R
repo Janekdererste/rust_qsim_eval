@@ -88,9 +88,15 @@ load_matsim_data <- function(files, num_cores) {
   return(result)
 }
 
-load_rust_tracing_data <- function(root, num_cores = 1) {
+load_rust_tracing_data <- function(root, num_cores = 1, file_name_filter = c(), node_count_filter = -1) {
   dirs <- trace_dirs(root)
   files <- trace_files_in_folders(dirs)
+  if (length(file_name_filter) > 0) {
+      files <- files[grep(file_name_filter, files)]
+  }
+  if (node_count_filter > 0) {
+    files <- files[sapply(files, function(x) grepl(paste0(node_count_filter, "$"), x["dir"]))]
+  }
   data <- load_rust_data(files, num_cores)
 }
 
