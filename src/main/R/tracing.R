@@ -95,7 +95,7 @@ load_rust_tracing_data <- function(root, num_cores = 1, file_name_filter = c(), 
       files <- files[grep(file_name_filter, files)]
   }
   if (node_count_filter > 0) {
-    files <- files[sapply(files, function(x) grepl(paste0(node_count_filter, "$"), x["dir"]))]
+    files <- files[sapply(files, function(x) endsWith(x["dir"], paste0("-",node_count_filter)))]
   }
   data <- load_rust_data(files, num_cores)
 }

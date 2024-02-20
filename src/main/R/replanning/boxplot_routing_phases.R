@@ -3,10 +3,10 @@ library(tidyverse)
 # json library recommendet by tidyverse https://cran.r-project.org/web/packages/jsonlite/vignettes/json-aaquickstart.html
 library(jsonlite)
 
-source("../colors.R")
-source("../parsing.R")
-source("../tracing.R")
-source("routing_utils.R")
+source("./src/main/R/colors.R")
+source("./src/main/R/parsing.R")
+source("./src/main/R/tracing.R")
+source("./src/main/R/replanning/routing_utils.R")
 
 get_label <- function(input_string) {
   # Extrahiere den Substring nach dem letzten ::
@@ -16,9 +16,10 @@ get_label <- function(input_string) {
   return(substring_after_last_double_colon)
 }
 
-traces <- load_csv_instrument("../../../../assets/hlrn", num_cores = 16, node_count_filter = 256)
+traces <- load_rust_tracing_data("./assets/hlrn-all/update-no-replan", num_cores = 16, node_count_filter = 256)
 
-filtered_data <- filter_by_func(traces, routing_filter)
+filtered_data <- filter_by_func(traces, c(DESERIALIZE_KEY, COLLECT_KEY, COMMUNICATION_ALL_KEY, COMMUNICATION_KEY, INSERTION_KEY, HANDLE_KEY)) %>%
+  filter(sim_time != 0)
 
 ggplot(filtered_data, aes(x = factor(rank), y = duration/1e6)) +
   geom_boxplot() +

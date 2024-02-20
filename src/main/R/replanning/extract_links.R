@@ -37,7 +37,7 @@ get_entry_with_number_of_processes <- function(processes, process_count) {
   return (Filter(function(x) nrow(x) == process_count, processes)[[1]])
 }
 
-log_folder <- "./assets/hlrn"
+log_folder <- "./assets/hlrn-all/update-no-replan"
 log_files <- list.files(log_folder, pattern = "^[0-9]+-.+\\.log$", full.names = TRUE)
 results <- map(log_files, extract_links_per_process)
 
@@ -63,4 +63,5 @@ ggplot(data, aes(x = factor(process), y = mean)) +
   geom_point(color = "orange") +
   geom_text(aes(label = sprintf("%.0f", mean)), vjust = -0.5, size = 3) +
   scale_y_log10() +
-  labs(title = "Durchschnitt auf Anzahl der Prozesse", x = "Anzahl der Processes", y = "Mean #Links")
+  labs(title = "Link Distribution", x = "#Partitions", y = "Mean #Links")
+ggsave("link-distribution.pdf")
