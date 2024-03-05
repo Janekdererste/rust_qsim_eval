@@ -16,6 +16,7 @@ main_functions <- traces_combined %>%
            func == "rust_q_sim::simulation::simulation::terminate_teleportation")
 
 mean_timings <- main_functions %>%
+  filter(sim_time > 0) %>%
   group_by(func_name, size) %>%
   summarize(mean_dur = mean(duration))
 
@@ -125,6 +126,9 @@ ggplot(diff_receive_msg, aes(x = bin_start, y = dur_span / 1e3, color = as.facto
   geom_smooth(se = TRUE) +
   ylim(0, 200) +
   scale_color_manual(values = many()) +
+  xlab("Simulation Time [s]") +
+  ylab("diff execution time [\u00B5s]") +
+  ggtitle(paste("Diff execution times slowest and fastest for communicators::receive_msgs -", width, "sim. second bins")) +
   guides(color = guide_legend(override.aes = list(size = 4, alpha = 1.0))) +
   theme_light()
 
