@@ -4,7 +4,12 @@ library(tidyverse)
 source("./src/main/R/tracing.R")
 source("./src/main/R/colors.R")
 
-traces_combined <- load_rust_tracing_data("/Users/janek/Documents/rust_q_sim/berlin/output-1pct", num_cores = 8)
+traces_combined <- load_rust_tracing_data(c(
+  "/Users/janek/hlrn/berlin-v6.0-25pct/output-with-tracing/size-2",
+  "/Users/janek/hlrn/berlin-v6.0-25pct/output-with-tracing/size-4",
+  "/Users/janek/hlrn/berlin-v6.0-25pct/output-with-tracing/size-8",
+  "/Users/janek/hlrn/berlin-v6.0-25pct/output-with-tracing/size-16",
+  "/Users/janek/hlrn/berlin-v6.0-25pct/output-with-tracing/size-32"), num_cores = 12)
 
 main_functions <- traces_combined %>%
   filter(func == "rust_q_sim::simulation::network::sim_network::move_nodes" |
