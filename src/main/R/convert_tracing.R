@@ -1,7 +1,33 @@
+set_working_dir <- function() {
+  args <- commandArgs(trailingOnly = FALSE)
+  # extract the script path
+  script <- args[grep("--file", args)] # Extract the path from the argument
+  script_path <- sub("--file=", "", script)
+
+  # Normalize the path to handle any symbolic links or relative path elements
+  normalized_script_path <- normalizePath(script_path)
+
+  # Extract the directory part of the path
+  script_dir <- dirname(normalized_script_path)
+
+  print(paste("Setting working dir to:", paste0(script_dir, "/")))
+  setwd(dirname(script_dir))
+}
+
+set_working_dir()
+
 library(parallel)
 library(tidyverse)
+source("./R/tracing_files.R")
 
-source("tracing_files.R")
+parse_roots <- function() {
+  args <- commandArgs(trailingOnly = TRUE)
+  if (length(args) < 1) {
+    stop("A root to search for files is expected for example 'RScript /path/to/script.R /path/to/root/folder '")
+  }
+
+  args
+}
 
 read_write_files <- function(files) {
   avail_cores <- parallel::detectCores()
@@ -53,5 +79,5 @@ convert_csv_to_binary <- function(roots) {
   read_write_files(files = files)
 }
 
-# if we want to improve this, we could supply the starting point as command line args
-convert_csv_to_binary("./")
+roots <- parse_roots()
+convert_csv_to_binary(roots)
