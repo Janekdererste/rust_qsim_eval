@@ -1,6 +1,8 @@
 library(parallel)
 library(tidyverse)
 
+source("tracing_files.R")
+
 read_write_files <- function(files) {
   avail_cores <- parallel::detectCores()
   used_cores <- max(1, avail_cores - 2)
@@ -46,55 +48,10 @@ convert_data <- function(data, size, width = 30) {
     summarize(median_dur = median(duration), .groups = "drop")
 }
 
-detect_tracing_files <- function(roots, pattern) {
-
-  avail_cores <- parallel::detectCores()
-  used_cores <- max(1, avail_cores - 2)
-
-  print("Detecting trace files.")
-
-  files <- lapply(roots, function(root) {
-    dirs <- fs::dir_ls(root, recurse = TRUE, type = "directory")
-    instrument_dirs <- dirs[basename(dirs) == "instrument"]
-    instrument_files <- mclapply(instrument_dirs, function(dir) {
-      parent_dir <- basename(dirname(dir))
-      instrument_files <- list.files(dir, pattern = pattern, full.names = TRUE)
-      lapply(instrument_files, function(file) {
-        c(dir = parent_dir, file = file)
-      })
-    }, mc.cores = used_cores)
-    list_flatten(instrument_files)
-  })
-  list_flatten(files)
-}
-
-read_binary_files <- function(files) {
-  tibbles <- lapply(files, function(file) {
-    print(paste("Start reading file:", file))
-    read_rds(file)
-  })
-
-  print(paste("Starting to bind", length(tibbles), "tibbles"))
-  result <- bind_rows(tibbles)
-  return(result)
-}
-
 convert_csv_to_binary <- function(roots) {
-  files <- detect_tracing_files(roots = roots, pattern = "^instrument_process_\\d+\\.csv$")
+  files <- detect_csv_tracing(roots = roots)
   read_write_files(files = files)
 }
 
-read_binary_tracing <- function(roots) {
-  entries <- detect_tracing_files(roots = roots, pattern = "^instrument_process_\\d+\\.rds")
-  files <- lapply(entries, function(entry) { entry["file"] })
-  read_binary_files(files)
-}
-
-roots <- c(
-  "/Users/janek/hlrn/berlin-v6.0-25pct/output-with-tracing/size-2"
-  #"/Users/janek/hlrn/berlin-v6.0-25pct/output-with-tracing/size-4"
-)
-
-#convert_csv_to_binary(roots = roots)
-result <- read_binary_tracing(roots = roots)
-print(result)
+# if we want to improve this, we could supply the starting point as command line args
+convert_csv_to_binary("./")
