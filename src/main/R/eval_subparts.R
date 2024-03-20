@@ -161,10 +161,70 @@ acc_work_times <- iteration %>%
     move_links) %>%
   select(size, sim_time, rank, acc_duration)
 
-ggplot(acc_work_times, aes(x = sim_time, y = acc_duration / 1e3)) +
-  geom_point(alpha = 0.3, shape = '.') +
-  facet_wrap(~size, scale = "free_y") +
+acc_work_times_1024 <- acc_work_times %>%
+  filter(size == 1024)
+
+p <- ggplot(acc_work_times_1024, aes(x = sim_time, y = acc_duration / 1e3, color = as.factor(rank))) +
+  geom_point(alpha = 0.6, shape = '.') +
+  scale_y_log10() +
+  #facet_wrap(~size, scale = "free_y") +
   xlab("Simulation Time [s]") +
-  ylab("median duration [\u00B5s]") +
-  ggtitle(paste("Median Execution Times for simulation work -", 30, "sim. second bins")) +
+  ylab("duration [\u00B5s]") +
+  ggtitle(paste("Execution time for simulation work (wakeup + teleport + move_nodes + move_links)")) +
+  theme_light() +
+  theme(legend.position = "none")
+p
+
+#acc_work_times_1024_busy <- acc_work_times_1024 %>%
+#filter(sim_time > 18000 & sim_time < 86400)
+
+p <- ggplot(acc_work_times_1024, aes(x = sim_time, y = rank, fill = acc_duration / 1e3)) +
+  geom_raster() +
+  scale_fill_viridis_c(option = "magma", direction = -1, trans = "log10") +
+  ggtitle("Busy Times for 1024 cores") +
   theme_light()
+p
+
+wait_times_1024 <- iteration %>%
+  filter(func == "receive_msgs") %>%
+  filter(size == 1024) %>%
+  select(size, sim_time, rank, duration)
+
+p <- ggplot(wait_times_1024, aes(x = sim_time, y = duration / 1e3, color = as.factor(rank))) +
+  geom_point(alpha = 0.6, shape = '.') +
+  #facet_wrap(~size, scale = "free_y") +
+  xlab("Simulation Time [s]") +
+  ylab("duration [\u00B5s]") +
+  scale_y_log10() +
+  ggtitle(paste("Wait Times for 1024")) +
+  theme_light() +
+  theme(legend.position = "none")
+p
+
+p <- ggplot(wait_times_1024, aes(x = sim_time, y = rank, fill = duration / 1e3)) +
+  geom_raster() +
+  scale_fill_viridis_c(option = "magma", direction = -1, trans = "log10") +
+  ggtitle("Wait times for 1024 cores") +
+  theme_light()
+p
+
+# try to plot the 1024 run with neighbor information
+neighbors <- read_csv("/Users/janek/Documents/rust_q_sim/berlin-v6.0-25pct-1024-neighbors.csv")
+neighbors %>%
+  summarize(mean(neighbors))
+
+joined <- wait_times_1024 %>% left_join(neighbors, by = join_by(rank == rank))
+
+p <- ggplot(joined, aes(x = sim_time, y = duration / 1e3, color = as.factor(neighbors))) +
+  geom_point(alpha = 0.6, shape = '.') +
+  #facet_wrap(~size, scale = "free_y") +
+  xlab("Simulation Time [s]") +
+  ylab("duration [\u00B5s]") +
+  scale_y_log10() +
+  ggtitle(paste("Wait Times by #neighbors for 1024")) +
+  theme_light() +
+  theme(legend.position = "right") +
+  guides(color = guide_legend(override.aes = list(size = 2, alpha = 1.0, shape = 1)))
+#theme(legend.position = "none")
+
+ggsave("./wait-times-neighbor.png", p)

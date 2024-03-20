@@ -47,10 +47,3 @@ blue <- function() {
 yellow <- function() {
   "#F5F749"
 }
-
-theme <- function(ggplot_object) {
-  ggplot_object +
-    scale_fill_manual(values = blue_to_red()) +
-    scale_color_manual(values = blue_to_red()) +
-    theme_light()
-}
