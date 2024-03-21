@@ -4,18 +4,7 @@ library(tidyverse)
 source("./src/main/R/read_tracing_files.R")
 source("./src/main/R/colors.R")
 
-traces <- read_binary_tracing_files(c(
-  "/Users/janek/Downloads/output-with-tracing/size-2",
-  "/Users/janek/Downloads/output-with-tracing/size-4",
-  "/Users/janek/Downloads/output-with-tracing/size-8",
-  "/Users/janek/Downloads/output-with-tracing/size-16",
-  "/Users/janek/Downloads/output-with-tracing/size-32",
-  "/Users/janek/Downloads/output-with-tracing/size-64",
-  "/Users/janek/Downloads/output-with-tracing/size-128",
-  "/Users/janek/Downloads/output-with-tracing/size-256",
-  "/Users/janek/Downloads/output-with-tracing/size-512",
-  "/Users/janek/Downloads/output-with-tracing/size-1024"
-))
+traces <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-with-tracing")
 
 execution_times <- traces %>%
   filter(func == "rust_q_sim::simulation::simulation::run") %>%
@@ -137,7 +126,7 @@ wait_times <- iteration %>%
   filter(func == "receive_msgs") %>%
   filter(size > 1 & size <= 1024)
 
-ggplot(wait_times, aes(x = sim_time, y = duration / 1e3)) + #color = as.factor(rank))) +
+p <- ggplot(wait_times, aes(x = sim_time, y = duration / 1e3)) + #color = as.factor(rank))) +
   geom_point(alpha = 0.3, shape = '.') +
   #geom_smooth(se = TRUE) +
   facet_wrap(~size) +
@@ -148,6 +137,8 @@ ggplot(wait_times, aes(x = sim_time, y = duration / 1e3)) + #color = as.factor(r
   ylab("median duration [\u00B5s]") +
   ggtitle(paste("Median Execution Times for communicators::receive_msgs -", 30, "sim. second bins")) +
   theme_light()
+ggsave("./wait-times.png", p, dpi = 320)
+p
 
 acc_work_times <- iteration %>%
   filter(func == "wakeup" |
@@ -221,10 +212,37 @@ p <- ggplot(joined, aes(x = sim_time, y = duration / 1e3, color = as.factor(neig
   xlab("Simulation Time [s]") +
   ylab("duration [\u00B5s]") +
   scale_y_log10() +
+  scale_color_manual(values = qualitative()) +
   ggtitle(paste("Wait Times by #neighbors for 1024")) +
   theme_light() +
   theme(legend.position = "right") +
   guides(color = guide_legend(override.aes = list(size = 2, alpha = 1.0, shape = 1)))
 #theme(legend.position = "none")
-
+p
 ggsave("./wait-times-neighbor.png", p)
+
+communication <- traces %>%
+  filter(bin_start > 0) %>%
+  filter(
+    func == "rust_q_sim::simulation::messaging::communication::communicators::send_receive_vehicles"
+  ) %>%
+  mutate(func_name = sub(".*::", "", func)) %>%
+  mutate(sim_time = bin_start) %>%
+  mutate(duration = median_dur) %>%
+  mutate(func = func_name) %>%
+  select(size, sim_time, rank, func, duration)
+
+joined_communication <- communication %>% left_join(neighbors, by = join_by(rank == rank))
+
+p <- ggplot(joined_communication, aes(x = sim_time, y = duration / 1e3, color = as.factor(neighbors))) +
+  geom_point(alpha = 0.6, shape = '.') +
+  #facet_wrap(~size, scale = "free_y") +
+  xlab("Simulation Time [s]") +
+  ylab("duration [\u00B5s]") +
+  scale_y_log10() +
+  scale_color_manual(values = qualitative()) +
+  ggtitle(paste("Communication times by #neighbors for 1024")) +
+  theme_light() +
+  theme(legend.position = "right") +
+  guides(color = guide_legend(override.aes = list(size = 2, alpha = 1.0, shape = 1)))
+p

@@ -1,45 +1,24 @@
 #tidyverse https://www.tidyverse.org/ which is the stuff we use to wrangle and plot our data
 library(tidyverse)
-# json library recommendet by tidyverse https://cran.r-project.org/web/packages/jsonlite/vignettes/json-aaquickstart.html
-library(jsonlite)
 
+source("./src/main/R/read_tracing_files.R")
 source("./src/main/R/colors.R")
-source("./src/main/R/parsing.R")
-source("./src/main/R/tracing.R")
 
-traces <- load_rust_tracing_data("/Users/janek/hlrn/berlin-v6.0-25pct/output-with-tracing", num_cores = 8)
-overall_run_time <- traces %>%
+traces <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-1pct/output")
+execution_times <- traces %>%
   filter(func == "rust_q_sim::simulation::simulation::run") %>%
-  mutate(speedup = (1 / duration) / (1 / max(duration))) %>%
-  mutate(secs = duration / 1e9)
-
-duration_summary <- overall_run_time %>%
   group_by(size) %>%
-  summarize(mean_duration = mean(secs))
+  summarize(run_time = mean(median_dur) / 1e9)
 
-speedup_summary <- overall_run_time %>%
-  group_by(size) %>%
-  summarize(mean_speedup = mean(speedup))
-
-p <- ggplot(duration_summary, aes(x = size, y = mean_duration)) +
+ggplot(execution_times, aes(x = size, y = run_time)) +
   geom_line(color = pink()) +
   geom_point(color = pink()) +
   scale_y_log10() +
   scale_x_log10() +
-  geom_text(aes(label = round(mean_duration, 1)), vjust = -0.5, hjust = -0.05) +
+  geom_text(aes(label = round(run_time, 1)), vjust = -0.5, hjust = -0.05) +
   xlab("Number of Cores") +
-  ggtitle("Berlin v6.0 0% Scenario - Overall Runtime [s] on Intel® Xeon® Platinum 9242 Processor ") +
+  ggtitle("Overall Runtime [s] on Intel® Xeon® Platinum 9242 Processor ") +
   theme_light()
-p
-
-p <- ggplot(speedup_summary, aes(x = size, y = mean_speedup)) +
-  geom_line(color = blue()) +
-  geom_point(color = blue()) +
-  geom_text(aes(label = round(mean_speedup, 1)), vjust = 1.5, hjust = -0.1) +
-  xlab("Number of Cores") +
-  ggtitle("RVR-v1.4 10% Scenario - Overall Speedup on 2 x 24-Core Epyc 7352") +
-  theme_light()
-p
 
 #------------------------ Load matsim classic ---------------
 matsim_traces <- load_matsim_tracing_data("/Users/janek/Cluster/matsim-benchmark/berlin-v6.0-25pct", num_cores = 8)
