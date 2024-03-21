@@ -7,10 +7,10 @@ source("./src/main/R/colors.R")
 source("./src/main/R/parsing.R")
 source("./src/main/R/tracing.R")
 
-traces <- load_rust_tracing_data("/Users/janek/Cluster/pqsim_benchmark/rvr-v1.4-10pct/output", num_cores = 8)
+traces <- load_rust_tracing_data("/Users/janek/hlrn/berlin-v6.0-25pct/output-with-tracing", num_cores = 8)
 overall_run_time <- traces %>%
   filter(func == "rust_q_sim::simulation::simulation::run") %>%
-  mutate (speedup = (1/duration) / (1/max(duration))) %>%
+  mutate(speedup = (1 / duration) / (1 / max(duration))) %>%
   mutate(secs = duration / 1e9)
 
 duration_summary <- overall_run_time %>%
@@ -28,7 +28,7 @@ p <- ggplot(duration_summary, aes(x = size, y = mean_duration)) +
   scale_x_log10() +
   geom_text(aes(label = round(mean_duration, 1)), vjust = -0.5, hjust = -0.05) +
   xlab("Number of Cores") +
-  ggtitle("RVR-v1.4 10% Scenario - Overall Runtime [s] on 2 x 24-Core Epyc 7352") +
+  ggtitle("Berlin v6.0 0% Scenario - Overall Runtime [s] on Intel® Xeon® Platinum 9242 Processor ") +
   theme_light()
 p
 
@@ -42,10 +42,10 @@ p <- ggplot(speedup_summary, aes(x = size, y = mean_speedup)) +
 p
 
 #------------------------ Load matsim classic ---------------
-matsim_traces <- load_matsim_tracing_data("/Users/janek/Cluster/matsim-benchmark/rvr-v1.4-10pct/output-10pct", num_cores = 8)
+matsim_traces <- load_matsim_tracing_data("/Users/janek/Cluster/matsim-benchmark/berlin-v6.0-25pct", num_cores = 8)
 matsim_traces <- matsim_traces %>%
   mutate(secs = duration / 1e9) %>%
-  mutate(speedup = (1/duration) / (1/max(duration)))
+  mutate(speedup = (1 / duration) / (1 / max(duration)))
 
 p <- ggplot(matsim_traces, aes(x = size, y = secs)) +
   geom_line(color = blue()) +

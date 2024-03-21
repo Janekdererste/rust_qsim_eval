@@ -3,10 +3,12 @@ library(tidyverse)
 
 source("./src/main/R/parsing.R")
 
-trace_dirs <- function(root) {
-  sub_dirs <- list.dirs(root)
-  trace_directories <- sub_dirs[grep("/instrument", sub_dirs)]
-  return(trace_directories)
+trace_dirs <- function(roots) {
+  lapply(roots, function(root) {
+    sub_dirs <- list.dirs(root)
+    trace_directories <- sub_dirs[grep("/instrument", sub_dirs)]
+    return(trace_directories)
+  })
 }
 
 trace_files_in_folders <- function(trace_dirs) {
@@ -48,7 +50,7 @@ stream_json <- function(files) {
 
 load_rust_data <- function(files, num_cores) {
 
-  tibbles <- mclapply(files, function(entry) {
+  tibbles <- lapply(files, function(entry) {
 
     file_path <- entry["file"]
     print(paste("reading file: ", file_path))
@@ -68,14 +70,14 @@ load_rust_data <- function(files, num_cores) {
       mutate(size = size) %>%
       mutate(func = paste(target, func_name, sep = "::"))
     return(file_data)
-  }, mc.cores = num_cores, mc.preschedule = TRUE)
+  }) #, mc.cores = num_cores, mc.preschedule = TRUE)
   print(paste("Starting to bind ", length(tibbles), " tibbles"))
   result <- bind_rows(tibbles)
   return(result)
 }
 
 load_matsim_data <- function(files, num_cores) {
-  tibbles <- mclapply(files, function(file) {
+  tibbles <- lapply(files, function(file) {
     if (!file.exists(file)) {
       warning(paste("File does not exist: ", file))
       return(tibble())
@@ -83,9 +85,59 @@ load_matsim_data <- function(files, num_cores) {
 
     file_data <- read_csv(file)
     return(file_data)
-  }, mc.cores = num_cores, mc.preschedule = TRUE)
+  }) #, mc.cores = num_cores, mc.preschedule = TRUE)
   result <- bind_rows(tibbles)
   return(result)
+}
+
+convert_to_binary <- function(roots, num_cores = 1) {
+  print("Detecting directories")
+  dirs <- trace_dirs(roots)
+  print("Detecting tracing files")
+  files <- trace_files_in_folders(dirs)
+  convert_tracing_files(files)
+}
+
+convert_tracing_files <- function(files) {
+  avail_cores <- parallel::detectCores()
+  used_cores <- max(1, avail_cores - 2)
+  mclapply(files, function(entry) {
+
+    file_path <- entry["file"]
+    print(paste("reading file: ", file_path))
+    if (!file.exists(file_path)) {
+      stop(paste("File does not exist:", file_path))
+    }
+
+    size <- as.numeric(str_extract(entry["dir"], "\\d+"))
+    file_data <- read_csv(file_path)
+    if (nrow(file_data) == 0 || ncol(file_data) != 6) {
+      warning(paste("Failed to load tibble from file:", file_path, "The tibble looks like below:"))
+      print(file_data)
+      stop("Aborting reading process!")
+    }
+    width <- 30
+    file_data <- file_data %>%
+      mutate(size = size) %>%
+      mutate(func = paste(target, func_name, sep = "::")) %>%
+      mutate(
+        time_bin = cut_width(sim_time, width = width, boundary = 0, closed = "left"),
+        bin_start = floor(sim_time / width) * width
+      ) %>%
+      group_by(bin_start, size, rank, func_name) %>%
+      summarize(median_dur = median(duration), .groups = "drop")
+
+    #filter(func == "rust_q_sim::simulation::network::sim_network::move_nodes" |
+    #         func == "rust_q_sim::simulation::network::sim_network::move_links" |
+    #         func == "rust_q_sim::simulation::messaging::communication::communicators::handle_msgs" |
+    #         func == "rust_q_sim::simulation::messaging::communication::communicators::receive_msgs" |
+    #         func == "rust_q_sim::simulation::messaging::communication::communicators::send_msgs" |
+    #         func == "rust_q_sim::simulation::simulation::run")
+
+    out_file_path <- sub("\\.csv$", ".rds", file_path)
+
+    write_rds(file_data, file = out_file_path, compress = "none", version = 3, text = FALSE)
+  }, mc.cores = used_cores)
 }
 
 load_rust_tracing_data <- function(root, num_cores = 1, file_name_filter = c(), node_count_filter = -1) {
