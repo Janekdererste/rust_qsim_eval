@@ -71,7 +71,7 @@ convert_data <- function(data, size, width = 30) {
       bin_start = floor(sim_time / width) * width
     ) %>%
     group_by(bin_start, size, rank, func) %>%
-    summarize(median_dur = median(duration), .groups = "drop")
+    summarize(median_dur = median(duration), max_dur = max(duration), mean_dur = mean(duration), .groups = "drop")
 }
 
 convert_csv_to_binary <- function(roots) {
