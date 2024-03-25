@@ -17,3 +17,18 @@ read_binary_tracing_files <- function(roots) {
   result <- bind_rows(tibbles)
   return(result)
 }
+
+read_matsim_tracing_files <- function(roots) {
+  entries <- detect_matsim_tracing(roots = roots)
+  files <- lapply(entries, function(entry) { entry["file"] })
+
+  tibbles <- lapply(files, function(file) {
+    print(paste("Start reading file:", file))
+    read_csv(file)
+  })
+
+  print(paste("Starting to bind", length(tibbles), "tibbles"))
+  result <- bind_rows(tibbles)
+  return(result)
+}
+
