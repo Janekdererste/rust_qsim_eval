@@ -32,6 +32,14 @@ berlin_in_link_traces <- read_binary_tracing_files("/Users/janek/Documents/writi
   mutate(rtr = 129600 / run_time) %>%
   mutate(name = "berlin-25%-in-link-cap")
 
+berlin_logging_traces <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp", on_load = function(data) {
+  data %>% filter(func == "rust_q_sim::simulation::simulation::run")
+}) %>%
+  group_by(size) %>%
+  summarize(run_time = mean(median_dur) / 1e9) %>%
+  mutate(rtr = 129600 / run_time) %>%
+  mutate(name = "berlin-25%-with-tracing")
+
 berlin_1pct_traces <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-1pct/output-pre-cmp") %>%
   filter(func == "rust_q_sim::simulation::simulation::run") %>%
   group_by(size) %>%
@@ -45,7 +53,7 @@ matsim_traces <- read_matsim_tracing_files("/Users/janek/Documents/writing/RustQ
   select(size, run_time, rtr) %>%
   mutate(name = "matsim-rvr-10%")
 
-combined <- bind_rows(rvr_traces, berlin_in_link_traces, rvr_1pct_traces, berlin_traces, berlin_1pct_traces, matsim_traces)
+combined <- bind_rows(rvr_traces, berlin_in_link_traces, rvr_1pct_traces, berlin_traces, berlin_1pct_traces, matsim_traces, berlin_logging_traces)
 
 ggplot(combined, aes(x = size, y = run_time, color = as.factor(name))) +
   geom_line() +
