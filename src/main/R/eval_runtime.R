@@ -58,7 +58,7 @@ ggplot(combined, aes(x = size, y = run_time, color = as.factor(name))) +
   ggtitle("Overall Runtime [s] on Intel® Xeon® Platinum 9242 Processor ") +
   theme_light()
 
-ggplot(combined, aes(x = size, y = rtr, color = as.factor(name))) +
+p <- ggplot(combined, aes(x = size, y = rtr, color = as.factor(name))) +
   geom_line() +
   geom_point() +
   scale_y_log10() +
@@ -68,6 +68,39 @@ ggplot(combined, aes(x = size, y = rtr, color = as.factor(name))) +
   xlab("Number of Cores") +
   ggtitle("Real Time Ratio on Intel® Xeon® Platinum 9242 Processor ") +
   theme_light()
+ggsave("rtr-hlrn.pdf", plot = p, device = "pdf", width = 297, height = 210, units = "mm")
+
+# make a plot to compare matsim and rust results
+
+rvr_matsim_comparison <- bind_rows(matsim_traces, rvr_traces) %>%
+  filter(size <= 48) %>%
+  group_by(name) %>%
+  mutate(max_by_name = max(run_time)) %>%
+  ungroup() %>%
+  mutate(speedup = max_by_name / run_time) %>%
+  select(size, run_time, speedup, rtr, name)
+
+ggplot(rvr_matsim_comparison, aes(x = size, y = speedup, color = as.factor(name))) +
+  geom_line() +
+  geom_point() +
+  geom_text(aes(label = round(rtr, 1)), vjust = -0.5, hjust = -0.05) +
+  scale_color_manual(values = qualitative()) +
+  xlab("Number of Cores") +
+  ggtitle("Speedup on Intel® Xeon® Platinum 9242 Processor ") +
+  theme_light() +
+  geom_abline(slope = 1, intercept = 0, color = "red")
+
+ggplot(rvr_matsim_comparison, aes(x = size, y = rtr, color = as.factor(name))) +
+  geom_line() +
+  geom_point() +
+  geom_text(aes(label = round(rtr, 1)), vjust = -0.5, hjust = -0.05) +
+  scale_color_manual(values = qualitative()) +
+  xlab("Number of Cores") +
+  ggtitle("RTR on one Intel® Xeon® Platinum 9242 Processor ") +
+  theme_light()
+
+
+
 
 
 
