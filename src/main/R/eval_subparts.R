@@ -1,5 +1,6 @@
 #tidyverse https://www.tidyverse.org/ which is the stuff we use to wrangle and plot our data
 library(tidyverse)
+library(patchwork)
 
 source("./src/main/R/read_tracing_files.R")
 source("./src/main/R/colors.R")
@@ -39,6 +40,8 @@ on_load <- function(data) {
 }
 
 wait_work <- read_binary_tracing_files(c(
+  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-16",
+  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-32",
   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-64",
   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-128",
   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-256",
@@ -49,15 +52,15 @@ wait_work <- read_binary_tracing_files(c(
   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-8192"
 ), on_load, parallel = TRUE)
 
-wait_work <- wait_work %>%
+wait_work_by_size <- wait_work %>%
   group_by(sim_time, size, name) %>%
   summarize(max_dur = max(duration), diff_dur = max(duration) - min(duration), .groups = 'drop')
 
-p <- ggplot(wait_work, aes(sim_time, max_dur / 1e3, color = as.factor(name))) +
+p <- ggplot(wait_work_by_size, aes(sim_time, max_dur / 1e3, color = as.factor(name))) +
   geom_point(shape = '.') +
   facet_wrap(~size, scales = "fixed") +
-  scale_y_log10() +
-  #ylim(0, 750) +
+  #scale_y_log10() +
+  ylim(0, 400) +
   ggtitle("Max duration of work and wait per sim step.") +
   ylab("Max. Duration [\u00B5s]") +
   labs(color = "") +
@@ -67,11 +70,11 @@ p <- ggplot(wait_work, aes(sim_time, max_dur / 1e3, color = as.factor(name))) +
 ggsave("work-wait-hlrn.pdf", plot = p, device = "pdf", width = 297, height = 210, units = "mm")
 p
 
-p <- ggplot(wait_work, aes(sim_time, diff_dur / 1e3, color = as.factor(name))) +
+p <- ggplot(wait_work_by_size, aes(sim_time, diff_dur / 1e3, color = as.factor(name))) +
   geom_point(shape = '.') +
   facet_wrap(~size, scales = "fixed") +
-  scale_y_log10() +
-  #ylim(0, 600) +
+  #scale_y_log10() +
+  ylim(0, 400) +
   ggtitle("Difference between max. and min. duration per sim step.") +
   ylab("Max. Duration [\u00B5s]") +
   labs(color = "") +
@@ -80,6 +83,69 @@ p <- ggplot(wait_work, aes(sim_time, diff_dur / 1e3, color = as.factor(name))) +
   theme_light()
 ggsave("work-wait-diff-hlrn.pdf", plot = p, device = "pdf", width = 297, height = 210, units = "mm")
 p
+
+p <- ggplot(wait_work_by_size, aes(sim_time, max_dur / 1e3, color = as.factor(size))) +
+  geom_point(shape = '.') +
+  facet_wrap(~name) +
+  #scale_y_log10() +
+  ylim(0, 400) +
+  scale_color_manual(values = qualitative()) +
+  ylab("Max. Duration [\u00B5s]") +
+  guides(color = guide_legend(override.aes = list(size = 2, alpha = 1.0, shape = 1))) +
+  theme_light()
+p
+
+work_16 <- wait_work %>%
+  filter(size == 16) %>%
+  filter(sim_time <= 86400) %>%
+  filter(name == "work") %>%
+  group_by(sim_time) %>%
+  mutate(diff_to_min = duration - min(duration)) %>%
+  ungroup()
+
+work_1024 <- wait_work %>%
+  filter(size == 1024) %>%
+  filter(sim_time <= 86400) %>%
+  filter(name == "work") %>%
+  group_by(sim_time) %>%
+  mutate(diff_to_min = duration - min(duration)) %>%
+  mutate(high_duration = duration > quantile(duration, 0.95)) %>%
+  mutate(slowest = duration == max(duration)) %>%
+  ungroup()
+
+p_16_diff <- ggplot(work_16, aes(x = sim_time, y = rank, fill = diff_to_min / 1e3)) +
+  geom_raster() +
+  scale_fill_viridis_c(option = "magma", direction = -1) +
+  labs(fill = "Diff. [\u00B5s]") +
+  ggtitle(paste("Difference to fastest work time for 16 Cores")) +
+  theme_light()
+
+p_1024_diff <- ggplot(work_1024, aes(x = sim_time, y = rank, fill = diff_to_min / 1e3)) +
+  geom_raster() +
+  scale_fill_viridis_c(option = "magma", direction = -1) +
+  labs(fill = "Diff. [\u00B5s]") +
+  ggtitle(paste("Difference to fastest work time for 1024 cores")) +
+  theme_light()
+
+combined <- p_16_diff + p_1024_diff
+combined
+
+p <- ggplot(work_1024, aes(x = sim_time, y = rank, fill = as.factor(high_duration))) +
+  geom_raster() +
+  #scale_fill_viridis_c(option = "magma", direction = -1) +
+  labs(fill = "Diff. [\u00B5s]") +
+  ggtitle(paste("Difference to fastest work time for 1024 cores")) +
+  theme_light()
+p
+
+p <- ggplot(work_1024, aes(x = sim_time, y = rank, fill = as.factor(slowest))) +
+  geom_raster() +
+  #scale_fill_viridis_c(option = "magma", direction = -1) +
+  labs(fill = "Diff. [\u00B5s]") +
+  ggtitle(paste("Difference to fastest work time for 1024 cores")) +
+  theme_light()
+p
+
 
 traces <- read_binary_tracing_files(c(
   # "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-1",

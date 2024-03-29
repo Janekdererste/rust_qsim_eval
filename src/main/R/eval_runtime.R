@@ -53,9 +53,10 @@ matsim_traces <- read_matsim_tracing_files("/Users/janek/Documents/writing/RustQ
   select(size, run_time, rtr) %>%
   mutate(name = "matsim-rvr-10%")
 
-combined <- bind_rows(rvr_traces, berlin_in_link_traces, rvr_1pct_traces, berlin_traces, berlin_1pct_traces, matsim_traces, berlin_logging_traces)
+#combined <- bind_rows(rvr_traces, berlin_in_link_traces, rvr_1pct_traces, berlin_traces, berlin_1pct_traces, matsim_traces, berlin_logging_traces)
 
-ggplot(combined, aes(x = size, y = run_time, color = as.factor(name))) +
+combined <- bind_rows(rvr_traces, rvr_1pct_traces, berlin_traces, berlin_1pct_traces,)
+p <- ggplot(combined, aes(x = size, y = run_time, color = as.factor(name))) +
   geom_line() +
   geom_point() +
   scale_y_log10() +
@@ -65,6 +66,7 @@ ggplot(combined, aes(x = size, y = run_time, color = as.factor(name))) +
   xlab("Number of Cores") +
   ggtitle("Overall Runtime [s] on Intel® Xeon® Platinum 9242 Processor ") +
   theme_light()
+ggsave("runtimes-hlrn.pdf", plot = p, device = "pdf", width = 297, height = 210, units = "mm")
 
 p <- ggplot(combined, aes(x = size, y = rtr, color = as.factor(name))) +
   geom_line() +
