@@ -7,6 +7,8 @@ HANDLE_KEY <- "rust_q_sim::simulation::replanning::routing::travel_times_collect
 DESERIALIZE_KEY <- "rust_q_sim::simulation::messaging::communication::communicators::deserialize_travel_times"
 HANDLE_INSERT <- "rust_q_sim::simulation::replanning::routing::graph::insert_new_travel_times_by_link"
 COMMUNICATION_ALL_KEY <- "rust_q_sim::simulation::replanning::routing::travel_times_collecting_alt_router::communicate_all"
+HANDLE_ALL_KEY <- "rust_q_sim::simulation::replanning::routing::travel_times_collecting_alt_router::handle_all"
+ROUTING_KEY <- "rust_q_sim::simulation::replanning::replanner::find_route"
 
 filter_by_func <- function(data, func_filter){
   filtered_data <- data %>%
