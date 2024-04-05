@@ -9,8 +9,7 @@ detect_tracing <- function(roots, pattern) {
 
   files <- lapply(roots, function(root) {
     dirs <- fs::dir_ls(root, recurse = TRUE, type = "directory")
-    instrument_dirs <- dirs[basename(dirs) == "instrument"]
-    instrument_files <- mclapply(instrument_dirs, function(dir) {
+    instrument_files <- mclapply(dirs, function(dir) {
       parent_dir <- basename(dirname(dir))
       instrument_files <- list.files(dir, pattern = pattern, full.names = TRUE)
       lapply(instrument_files, function(file) {
@@ -28,4 +27,8 @@ detect_binary_tracing <- function(roots) {
 
 detect_csv_tracing <- function(roots) {
   detect_tracing(roots = roots, pattern = "^instrument_process_\\d+\\.csv")
+}
+
+detect_matsim_tracing <- function(roots) {
+  detect_tracing(roots = roots, pattern = "^.+\\.instrument-mobsim\\.csv$")
 }

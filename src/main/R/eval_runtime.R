@@ -1,99 +1,116 @@
 #tidyverse https://www.tidyverse.org/ which is the stuff we use to wrangle and plot our data
 library(tidyverse)
-# json library recommendet by tidyverse https://cran.r-project.org/web/packages/jsonlite/vignettes/json-aaquickstart.html
-library(jsonlite)
 
+source("./src/main/R/read_tracing_files.R")
 source("./src/main/R/colors.R")
-source("./src/main/R/parsing.R")
-source("./src/main/R/tracing.R")
 
-traces <- load_rust_tracing_data("/Users/janek/hlrn/berlin-v6.0-25pct/output-with-tracing", num_cores = 8)
-overall_run_time <- traces %>%
+rvr_traces <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-pre-cmp") %>%
   filter(func == "rust_q_sim::simulation::simulation::run") %>%
-  mutate(speedup = (1 / duration) / (1 / max(duration))) %>%
-  mutate(secs = duration / 1e9)
-
-duration_summary <- overall_run_time %>%
   group_by(size) %>%
-  summarize(mean_duration = mean(secs))
+  summarize(run_time = mean(median_dur) / 1e9) %>%
+  mutate(rtr = 129600 / run_time) %>%
+  mutate(name = "rvr-10%")
 
-speedup_summary <- overall_run_time %>%
+rvr_1pct_traces <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-1pct/output-pre-cmp") %>%
+  filter(func == "rust_q_sim::simulation::simulation::run") %>%
   group_by(size) %>%
-  summarize(mean_speedup = mean(speedup))
+  summarize(run_time = mean(median_dur) / 1e9) %>%
+  mutate(rtr = 129600 / run_time) %>%
+  mutate(name = "rvr-1%")
 
-p <- ggplot(duration_summary, aes(x = size, y = mean_duration)) +
-  geom_line(color = pink()) +
-  geom_point(color = pink()) +
-  scale_y_log10() +
-  scale_x_log10() +
-  geom_text(aes(label = round(mean_duration, 1)), vjust = -0.5, hjust = -0.05) +
-  xlab("Number of Cores") +
-  ggtitle("Berlin v6.0 0% Scenario - Overall Runtime [s] on Intel® Xeon® Platinum 9242 Processor ") +
-  theme_light()
-p
+berlin_traces <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-pre-cmp") %>%
+  filter(func == "rust_q_sim::simulation::simulation::run") %>%
+  group_by(size) %>%
+  summarize(run_time = mean(median_dur) / 1e9) %>%
+  mutate(rtr = 129600 / run_time) %>%
+  mutate(name = "berlin-25%")
 
-p <- ggplot(speedup_summary, aes(x = size, y = mean_speedup)) +
-  geom_line(color = blue()) +
-  geom_point(color = blue()) +
-  geom_text(aes(label = round(mean_speedup, 1)), vjust = 1.5, hjust = -0.1) +
-  xlab("Number of Cores") +
-  ggtitle("RVR-v1.4 10% Scenario - Overall Speedup on 2 x 24-Core Epyc 7352") +
-  theme_light()
-p
+berlin_in_link_traces <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output") %>%
+  filter(func == "rust_q_sim::simulation::simulation::run") %>%
+  group_by(size) %>%
+  summarize(run_time = mean(median_dur) / 1e9) %>%
+  mutate(rtr = 129600 / run_time) %>%
+  mutate(name = "berlin-25%-in-link-cap")
 
-#------------------------ Load matsim classic ---------------
-matsim_traces <- load_matsim_tracing_data("/Users/janek/Cluster/matsim-benchmark/berlin-v6.0-25pct", num_cores = 8)
-matsim_traces <- matsim_traces %>%
-  mutate(secs = duration / 1e9) %>%
-  mutate(speedup = (1 / duration) / (1 / max(duration)))
+berlin_logging_traces <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp", on_load = function(data) {
+  data %>% filter(func == "rust_q_sim::simulation::simulation::run")
+}) %>%
+  group_by(size) %>%
+  summarize(run_time = mean(median_dur) / 1e9) %>%
+  mutate(rtr = 129600 / run_time) %>%
+  mutate(name = "berlin-25%-with-tracing")
 
-p <- ggplot(matsim_traces, aes(x = size, y = secs)) +
-  geom_line(color = blue()) +
-  geom_point(color = blue()) +
-  geom_text(aes(label = round(secs, 1)), vjust = -0.5, hjust = -0.05) +
-  xlab("Number of Cores") +
-  ggtitle("RVR-v1.4 10% Scenario - Overall Runtime Java-Qsim [s] on 2 x 24-Core Epyc 7352") +
-  theme_light()
-p
+berlin_1pct_traces <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-1pct/output-pre-cmp") %>%
+  filter(func == "rust_q_sim::simulation::simulation::run") %>%
+  group_by(size) %>%
+  summarize(run_time = mean(median_dur) / 1e9) %>%
+  mutate(rtr = 129600 / run_time) %>%
+  mutate(name = "berlin-1%")
 
-#-------------------- Compare classic and rust runtimes
+matsim_traces <- read_matsim_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/matsim-benchmark") %>%
+  mutate(run_time = duration / 1e9) %>%
+  mutate(rtr = 129600 / run_time) %>%
+  select(size, run_time, rtr) %>%
+  mutate(name = "matsim-rvr-10%")
 
-matsim_durations <- matsim_traces %>%
-  select(secs, size)
-rust_durations <- duration_summary %>%
-  mutate(secs = mean_duration) %>%
-  select(secs, size)
+#combined <- bind_rows(rvr_traces, berlin_in_link_traces, rvr_1pct_traces, berlin_traces, berlin_1pct_traces, matsim_traces, berlin_logging_traces)
 
-joined <- matsim_durations %>%
-  left_join(rust_durations, by = join_by(size), suffix = c(".matsim", ".rust")) %>%
-  pivot_longer(cols = c(ends_with(".matsim"), ends_with(".rust")), values_to = "secs") %>%
-  filter(!is.na(secs))
-
-p <- ggplot(joined, aes(x = size, y = secs, color = name)) +
+combined <- bind_rows(rvr_traces, rvr_1pct_traces, berlin_traces, berlin_1pct_traces,)
+p <- ggplot(combined, aes(x = size, y = run_time, color = as.factor(name))) +
   geom_line() +
   geom_point() +
-  scale_y_log10() +  # Add this line for log scaling on the y-axis +
+  scale_y_log10() +
   scale_x_log10() +
+  geom_text(aes(label = round(run_time, 1)), vjust = -0.5, hjust = -0.05) +
+  scale_color_manual(values = qualitative()) +
   xlab("Number of Cores") +
-  ggtitle("RVR-v1.4 10% Scenario - Runtimes Java vs. Rust on 2 x 24-Core Epyc 7352") +
-  theme_light() +
-  scale_color_manual(values = neon())
-p
-
-ratios <- joined %>%
-  group_by(size) %>%
-  mutate(ratio = secs[name == "secs.matsim"] / secs[name == "secs.rust"]) %>%
-  ungroup() %>%
-  filter(name == "secs.rust") %>%
-  select(size, ratio)
-
-p <- ggplot(ratios, aes(x = size, y = ratio)) +
-  geom_line(color = gray()) +
-  geom_point(color = gray()) +
-  xlab("Number of Cores") +
-  ggtitle("RVR-v1.4 10% Scenario - Speedup Rust vs. Java on 2 x 24-Core Epyc 7352)") +
+  ggtitle("Overall Runtime [s] on Intel® Xeon® Platinum 9242 Processor ") +
   theme_light()
-p
+ggsave("runtimes-hlrn.pdf", plot = p, device = "pdf", width = 297, height = 210, units = "mm")
+
+p <- ggplot(combined, aes(x = size, y = rtr, color = as.factor(name))) +
+  geom_line() +
+  geom_point() +
+  scale_y_log10() +
+  scale_x_log10() +
+  geom_text(aes(label = round(rtr, 1)), vjust = -0.5, hjust = -0.05) +
+  scale_color_manual(values = qualitative()) +
+  xlab("Number of Cores") +
+  ggtitle("Real Time Ratio on Intel® Xeon® Platinum 9242 Processor ") +
+  theme_light()
+ggsave("rtr-hlrn.pdf", plot = p, device = "pdf", width = 297, height = 210, units = "mm")
+
+# make a plot to compare matsim and rust results
+
+rvr_matsim_comparison <- bind_rows(matsim_traces, rvr_traces) %>%
+  filter(size <= 48) %>%
+  group_by(name) %>%
+  mutate(max_by_name = max(run_time)) %>%
+  ungroup() %>%
+  mutate(speedup = max_by_name / run_time) %>%
+  select(size, run_time, speedup, rtr, name)
+
+ggplot(rvr_matsim_comparison, aes(x = size, y = speedup, color = as.factor(name))) +
+  geom_line() +
+  geom_point() +
+  geom_text(aes(label = round(rtr, 1)), vjust = -0.5, hjust = -0.05) +
+  scale_color_manual(values = qualitative()) +
+  xlab("Number of Cores") +
+  ggtitle("Speedup on Intel® Xeon® Platinum 9242 Processor ") +
+  theme_light() +
+  geom_abline(slope = 1, intercept = 0, color = "red")
+
+ggplot(rvr_matsim_comparison, aes(x = size, y = rtr, color = as.factor(name))) +
+  geom_line() +
+  geom_point() +
+  geom_text(aes(label = round(rtr, 1)), vjust = -0.5, hjust = -0.05) +
+  scale_color_manual(values = qualitative()) +
+  xlab("Number of Cores") +
+  ggtitle("RTR on one Intel® Xeon® Platinum 9242 Processor ") +
+  theme_light()
+
+
+
 
 
 
