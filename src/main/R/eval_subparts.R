@@ -40,16 +40,19 @@ on_load <- function(data) {
 }
 
 wait_work <- read_binary_tracing_files(c(
+  #"/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-2",
+  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-4",
+  #"/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-8",
   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-16",
   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-32",
   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-64",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-128",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-256",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-512",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-1024",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-2048",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-4096",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-8192"
+  # "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-128",
+  #"/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-256",
+  # "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-512",
+  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-1024"
+  # "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-2048",
+  # "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-4096",
+  # "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-8192"
 ), on_load, parallel = TRUE)
 
 wait_work_by_size <- wait_work %>%
@@ -60,7 +63,7 @@ p <- ggplot(wait_work_by_size, aes(sim_time, max_dur / 1e3, color = as.factor(na
   geom_point(shape = '.') +
   facet_wrap(~size, scales = "fixed") +
   #scale_y_log10() +
-  ylim(0, 400) +
+  #ylim(0, 400) +
   ggtitle("Max duration of work and wait per sim step.") +
   ylab("Max. Duration [\u00B5s]") +
   labs(color = "") +
@@ -74,14 +77,16 @@ p <- ggplot(wait_work_by_size, aes(sim_time, diff_dur / 1e3, color = as.factor(n
   geom_point(shape = '.') +
   facet_wrap(~size, scales = "fixed") +
   #scale_y_log10() +
-  ylim(0, 400) +
+  #ylim(0, 400) +
   ggtitle("Difference between max. and min. duration per sim step.") +
   ylab("Max. Duration [\u00B5s]") +
-  labs(color = "") +
+  xlab("Simulation Time") +
+  labs(color = "Algorithm phase") +
   guides(color = guide_legend(override.aes = list(size = 2, alpha = 1.0, shape = 1))) +
   scale_color_manual(values = neon()) +
   theme_light()
-ggsave("work-wait-diff-hlrn.pdf", plot = p, device = "pdf", width = 297, height = 210, units = "mm")
+ggsave("work-wait-diff-hlrn.pdf", plot = p, device = "pdf", width = 210, height = 100, units = "mm")
+ggsave("work-wait-diff-hlrn.png", plot = p, device = "png", width = 210, height = 100, units = "mm")
 p
 
 p <- ggplot(wait_work_by_size, aes(sim_time, max_dur / 1e3, color = as.factor(size))) +
