@@ -38,3 +38,15 @@ read_matsim_tracing_files <- function(roots) {
   return(result)
 }
 
+read_neighbor_files <- function(roots) {
+  entries <- detect_neighbor_files(roots = roots)
+  files <- lapply(entries, function(entry) { entry["file"] })
+
+  tibbles <- lapply(files, function(file) {
+    read_csv(file) %>%
+      mutate(size = max(rank) + 1)
+  })
+
+  result <- bind_rows(tibbles)
+  return(result)
+}

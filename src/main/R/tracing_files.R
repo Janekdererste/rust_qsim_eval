@@ -32,3 +32,7 @@ detect_csv_tracing <- function(roots) {
 detect_matsim_tracing <- function(roots) {
   detect_tracing(roots = roots, pattern = "^.+\\.instrument-mobsim\\.csv$")
 }
+
+detect_neighbor_files <- function(roots) {
+  detect_tracing(roots = roots, pattern = "neighbors\\.csv")
+}
