@@ -13,11 +13,11 @@ source("./src/main/R/replanning/routing_utils.R")
 
 comm_traces <- load_rust_tracing_data("assets/hlrn-all/update-do-replan", num_cores = 16)
 
-first_sync <- comm_traces %>%
+first_sync <- all_traces %>%
   filter(size == 1 ) %>%
   filter(func == GATHER_LENGTHS_KEY)
 # Plot first sync durations
-first_sync <- comm_traces %>%
+first_sync <- all_traces %>%
   filter(func == GATHER_LENGTHS_KEY) %>%
   mutate(index = (row_number()-1) %% (97 * 2)) %>%
   filter(index %% 2 == 0) %>%

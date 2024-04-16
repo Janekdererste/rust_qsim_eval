@@ -40,29 +40,31 @@ on_load <- function(data) {
 }
 
 wait_work <- read_binary_tracing_files(c(
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-16",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-32",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-64",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-128",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-256",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-512",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-1024",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-2048",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-4096",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-8192"
+  # "/Users/paulheinrich/git/rust_qsim_eval/assets/instrument-wr/size-1",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/instrument-wr/size-2",
+  # "/Users/paulheinrich/git/rust_qsim_eval/assets/instrument-wr/size-4",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/instrument-wr/size-8",
+  # "/Users/paulheinrich/git/rust_qsim_eval/assets/instrument-wr/size-16",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/instrument-wr/size-32",
+  # "/Users/paulheinrich/git/rust_qsim_eval/assets/instrument-wr/size-64",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/instrument-wr/size-128",
+  # "/Users/paulheinrich/git/rust_qsim_eval/assets/instrument-wr/size-256",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/instrument-wr/size-512",
+  # "/Users/paulheinrich/git/rust_qsim_eval/assets/instrument-wr/size-1024",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/instrument-wr/size-2048"
 ), on_load, parallel = TRUE)
 
 wait_work_by_size <- wait_work %>%
   group_by(sim_time, size, name) %>%
   summarize(max_dur = max(duration), diff_dur = max(duration) - min(duration), .groups = 'drop')
 
-p <- ggplot(wait_work_by_size, aes(sim_time, max_dur / 1e3, color = as.factor(name))) +
+p <- ggplot(wait_work_by_size, aes(sim_time, max_dur / 1e6, color = as.factor(name))) +
   geom_point(shape = '.') +
   facet_wrap(~size, scales = "fixed") +
-  #scale_y_log10() +
-  ylim(0, 400) +
+  scale_y_log10() +
+  # ylim(0, 400) +
   ggtitle("Max duration of work and wait per sim step.") +
-  ylab("Max. Duration [\u00B5s]") +
+  ylab("Max. Duration in ms") +
   labs(color = "") +
   guides(color = guide_legend(override.aes = list(size = 2, alpha = 1.0, shape = 1))) +
   scale_color_manual(values = neon()) +
@@ -70,13 +72,13 @@ p <- ggplot(wait_work_by_size, aes(sim_time, max_dur / 1e3, color = as.factor(na
 ggsave("work-wait-hlrn.pdf", plot = p, device = "pdf", width = 297, height = 210, units = "mm")
 p
 
-p <- ggplot(wait_work_by_size, aes(sim_time, diff_dur / 1e3, color = as.factor(name))) +
+p <- ggplot(wait_work_by_size, aes(sim_time, diff_dur / 1e6, color = as.factor(name))) +
   geom_point(shape = '.') +
   facet_wrap(~size, scales = "fixed") +
-  #scale_y_log10() +
-  ylim(0, 400) +
+  scale_y_log10() +
+  # ylim(0, 400) +
   ggtitle("Difference between max. and min. duration per sim step.") +
-  ylab("Max. Duration [\u00B5s]") +
+  ylab("Max. Duration in ms") +
   labs(color = "") +
   guides(color = guide_legend(override.aes = list(size = 2, alpha = 1.0, shape = 1))) +
   scale_color_manual(values = neon()) +
@@ -157,10 +159,10 @@ traces <- read_binary_tracing_files(c(
   # "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-64",
   # "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-128",
   # "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-256",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-1024",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-2048",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-4096",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-8192"
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-partition/size-256",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-partition/size-512",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-partition/size-1024",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-partition/size-2048"
 ))
 
 # execution_times <- traces %>%
@@ -298,24 +300,24 @@ ggplot(diff_wait_times, aes(x = sim_time, y = diff_dur / 1e3, color = as.factor(
   ylab("Difference longest - slowest [\u00B5s] ") +
   labs(color = "# Cores") +
   theme_light()
-#
-# wait_times <- iteration %>%
-#   filter(func == "receive_msgs") %>%
-#   filter(size > 1 & size <= 1024)
-#
-# p <- ggplot(wait_times, aes(x = sim_time, y = duration / 1e3)) + #color = as.factor(rank))) +
-#   geom_point(alpha = 0.3, shape = '.') +
-#   #geom_smooth(se = TRUE) +
-#   facet_wrap(~size) +
-#   #ylim(0, 200) +
-#   #scale_color_manual(values = many()) +
-#   #guides(color = guide_legend(override.aes = list(size = 4, alpha = 1.0, shape = 1))) +
-#   xlab("Simulation Time [s]") +
-#   ylab("median duration [\u00B5s]") +
-#   ggtitle(paste("Median Execution Times for communicators::receive_msgs -", 30, "sim. second bins")) +
-#   theme_light()
-# #ggsave("./wait-times.png", p, dpi = 320)
-# p
+
+wait_times <- iteration %>%
+  filter(func == "receive_msgs") %>%
+  filter(size > 1 & size <= 1024)
+
+p <- ggplot(wait_times, aes(x = sim_time, y = duration / 1e3)) + #color = as.factor(rank))) +
+  geom_point(alpha = 0.3, shape = '.') +
+  #geom_smooth(se = TRUE) +
+  facet_wrap(~size) +
+  #ylim(0, 200) +
+  #scale_color_manual(values = many()) +
+  #guides(color = guide_legend(override.aes = list(size = 4, alpha = 1.0, shape = 1))) +
+  xlab("Simulation Time [s]") +
+  ylab("median duration [\u00B5s]") +
+  ggtitle(paste("Median Execution Times for communicators::receive_msgs -", 30, "sim. second bins")) +
+  theme_light()
+#ggsave("./wait-times.png", p, dpi = 320)
+p
 
 acc_work_times <- iteration %>%
   filter(func == "wakeup" |
@@ -379,7 +381,7 @@ wait_times_1024 <- iteration %>%
   filter(func == "receive_msgs") %>%
   filter(size == 1024) %>%
   select(size, sim_time, rank, duration)
-wait_times_2028 <- iteration %>%
+wait_times_2048 <- iteration %>%
   filter(func == "receive_msgs") %>%
   filter(size == 2048) %>%
   select(size, sim_time, rank, duration)
@@ -405,7 +407,7 @@ p <- ggplot(wait_times_8, aes(x = sim_time, y = rank, fill = duration / 1e3)) +
   theme_light()
 
 p
-p <- ggplot(wait_times_8, aes(x = sim_time, y = rank, fill = duration / 1e3)) +
+p <- ggplot(wait_times_2048, aes(x = sim_time, y = rank, fill = duration / 1e3)) +
   geom_raster() +
   scale_fill_viridis_c(option = "magma", direction = -1, trans = "log10") +
   ggtitle("Wait times for 2048 cores") +
@@ -448,7 +450,7 @@ acc_work_wait_8 <- work_8 %>% bind_rows(wait_8)
 
 ggplot(acc_work_wait_8, aes(sim_time, diff_max / 1e3)) +
   geom_point(shape = '.', color = pink()) +
-  ylim(0, 1000) +
+  # ylim(0, 1000) +
   facet_wrap(~name) +
   ylab("Diff max and min duration [\u00B5s]") +
   ggtitle(paste("Diff. max - min work and wait times per time step for", size, "cores")) +

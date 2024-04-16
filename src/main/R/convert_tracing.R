@@ -66,12 +66,16 @@ convert_data <- function(data, size, width = 30) {
   data %>%
     mutate(size = size) %>%
     mutate(func = paste(target, func_name, sep = "::")) %>%
-    mutate(
-      time_bin = cut_width(sim_time, width = width, boundary = 0, closed = "left"),
-      bin_start = floor(sim_time / width) * width
-    ) %>%
-    group_by(bin_start, size, rank, func) %>%
-    summarize(median_dur = median(duration), max_dur = max(duration), mean_dur = mean(duration), .groups = "drop")
+    filter(func_name == "collect_travel_times" |
+             func_name == "get_travel_times_by_mode_to_send" |
+             func_name == "gather_travel_time_lengths" |
+             func_name == "gather_travel_times_var_count" |
+             func_name == "deserialize_travel_times" |
+             func_name == "communicate_travel_times" |
+             func_name == "handle_traffic_info_messages" |
+             func_name == "handle_all" |
+             func_name == "communicate_all"
+    )
 }
 
 convert_csv_to_binary <- function(roots) {

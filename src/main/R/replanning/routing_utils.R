@@ -9,6 +9,12 @@ HANDLE_INSERT <- "rust_q_sim::simulation::replanning::routing::graph::insert_new
 COMMUNICATION_ALL_KEY <- "rust_q_sim::simulation::replanning::routing::travel_times_collecting_alt_router::communicate_all"
 HANDLE_ALL_KEY <- "rust_q_sim::simulation::replanning::routing::travel_times_collecting_alt_router::handle_all"
 ROUTING_KEY <- "rust_q_sim::simulation::replanning::replanner::find_route"
+REPLAN_MAIN_KEY <- "rust_q_sim::simulation::replanning::replanner::replan_main"
+WAKEUP_KEY <- "rust_q_sim::simulation::simulation::wakeup"
+SEND_RECEIVE_KEY <- "rust_q_sim::simulation::messaging::communication::communicators::send_receive_vehicles"
+RECEIVE_KEY <- "rust_q_sim::simulation::messaging::communication::communicators::receive_msgs"
+MOVE_LINKS_KEY <- "rust_q_sim::simulation::network::sim_network::move_links"
+MOVE_NODES_KEY <- "rust_q_sim::simulation::network::sim_network::move_nodes"
 
 filter_by_func <- function(data, func_filter){
   filtered_data <- data %>%

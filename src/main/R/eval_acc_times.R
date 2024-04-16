@@ -24,26 +24,25 @@ on_load <- function(data) {
 }
 
 data <- read_binary_tracing_files(roots = c(
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-1",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-2",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-4",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-8",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-16",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-32",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-64",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-128",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-256",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-512",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-1024",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-2048",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-4096"
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-multi-wght/size-1",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-multi-wght/size-2",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-multi-wght/size-4",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-multi-wght/size-8",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-multi-wght/size-16",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-multi-wght/size-32",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-multi-wght/size-64",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-multi-wght/size-128",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-multi-wght/size-256",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-multi-wght/size-512",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-multi-wght/size-1024",
+  "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-multi-wght/size-2048"
 ), on_load = on_load, parallel = TRUE) %>%
   group_by(size, func) %>%
   summarize(mean_dur = mean(duration), sum_dur = sum(duration))
 
 # split this into two reads, becuase otherwise the largest tibble can't be bound (I don't have enough ram)
 data_8192 <- read_binary_tracing_files(roots =
-                                         "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-8192"
+                                         "/Users/paulheinrich/git/rust_qsim_eval/assets/hlrn-all/update-do-replan-multi-wght/size-8192"
   , on_load = on_load, parallel = TRUE) %>%
   group_by(size, func) %>%
   summarize(mean_dur = mean(duration), sum_dur = sum(duration))

@@ -8,31 +8,114 @@ source("./src/main/R/colors.R")
 source("./src/main/R/parsing.R")
 source("./src/main/R/tracing.R")
 source("./src/main/R/replanning/routing_utils.R")
+source("./src/main/R/colors.R")
 
-all_traces <- load_rust_tracing_data("./assets/hlrn-all/update-no-replan", num_cores = 16)
+all_traces <- read_binary_tracing_files("./assets/instrument-router-updates-wr")
+all_traces_nr <- read_binary_tracing_files("./assets/instrument-router-update-nr")
 
-cc <- comm_traces %>%
+preprocessing <- all_traces %>%
+  filter(func == COLLECT_KEY | func == INSERTION_KEY) %>%
+  filter(sim_time != 0) %>%
+  group_by(size, sim_time, rank) %>%
+  summarise(duration = sum(duration)) %>%
+  group_by(size) %>%
+  summarise(mean_duration = mean(duration), median_duration = median(duration), func = "3preprocessing", type = "1wr")
+
+communicate_all <- all_traces %>%
+  filter(func == COMMUNICATION_ALL_KEY) %>%
+  filter(sim_time != 0) %>%
+  group_by(size, sim_time, rank) %>%
+  summarise(duration = sum(duration)) %>%
+  group_by(size) %>%
+  summarise(mean_duration = mean(duration), median_duration = median(duration), func = "2communication", type = "1wr")
+
+handle_all <- all_traces %>%
+  filter(func == HANDLE_KEY) %>%
+  filter(sim_time != 0) %>%
+  group_by(size, sim_time, rank) %>%
+  summarise(duration = sum(duration)) %>%
+  group_by(size) %>%
+  summarise(mean_duration = mean(duration), median_duration = median(duration), func = "1postprocessing", type = "1wr")
+
+preprocessing_nr <- all_traces_nr %>%
+  filter(func == COLLECT_KEY | func == INSERTION_KEY) %>%
+  filter(sim_time != 0) %>%
+  group_by(size, sim_time, rank) %>%
+  summarise(duration = sum(duration)) %>%
+  group_by(size) %>%
+  summarise(mean_duration = mean(duration), median_duration = median(duration), func = "3preprocessing", type = "2nr")
+
+communicate_all_nr <- all_traces_nr %>%
+  filter(func == COMMUNICATION_ALL_KEY) %>%
+  filter(sim_time != 0) %>%
+  group_by(size, sim_time, rank) %>%
+  summarise(duration = sum(duration)) %>%
+  group_by(size) %>%
+  summarise(mean_duration = mean(duration), median_duration = median(duration), func = "2communication", type = "2nr")
+
+handle_all_nr <- all_traces_nr %>%
+  filter(func == HANDLE_KEY) %>%
+  filter(sim_time != 0) %>%
+  group_by(size, sim_time, rank) %>%
+  summarise(duration = sum(duration)) %>%
+  group_by(size) %>%
+  summarise(mean_duration = mean(duration), median_duration = median(duration), func = "1postprocessing", type = "2nr")
+
+stacked_traces <- bind_rows(preprocessing, communicate_all, handle_all, preprocessing_nr, communicate_all_nr, handle_all_nr)
+
+p <- ggplot(stacked_traces) +
+  geom_bar(aes(x = type, y = median_duration/1e6, fill = func),
+           data = subset(stacked_traces, type == "1wr"),
+           stat = "identity", position = "stack") +
+  geom_bar(aes(x = type, y = median_duration/1e6, fill = func),
+           data = subset(stacked_traces, type == "2nr"),
+           stat = "identity", position = "stack", alpha = 0.5) +
+  facet_grid(~ size, switch = "x") +
+  labs(title = "Median Durations of Update Phases",
+       x = "Number of Processes",
+       y = "Duration in ms") +
+  scale_fill_manual(name = "Phases", values = neon(),
+                    labels = c("postprocessing", "communication", "preprocesing")) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 14),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(size = 14),
+    plot.title = element_text(size = 14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    legend.position = "bottom"
+  )
+p
+ggsave("router-update-overall.png", plot = p, device = "png", width = 297, height = 210, units = "mm")
+
+
+# =================================
+
+
+cc <- all_traces %>%
   filter(func == COMMUNICATION_KEY & sim_time != 0) %>%
   mutate(Index = rep(c(0, 1), length.out = nrow(.))) %>%
   filter(Index == 0)
 
-hh <- comm_traces %>%
+hh <- all_traces %>%
   filter(func == HANDLE_KEY & sim_time != 0) %>%
   mutate(Index = rep(c(0, 1), length.out = nrow(.))) %>%
   filter(Index == 0)
 
 # merge cc and hh and comm_traces without communication and handle
-tt <- bind_rows(cc, hh, comm_traces %>%
+tt <- bind_rows(cc, hh, all_traces %>%
   filter(func != COMMUNICATION_KEY, func != HANDLE_KEY))
 
-overall_runtimes <- tt %>%
+overall_runtimes <- all_traces %>%
   filter(sim_time != 0) %>% # remove the first entry
   group_by(size) %>%
   summarise(
     PreProcessingI = mean(tail(na.omit(duration[func == COLLECT_KEY], -1))) / 1e6,
     PreProcessingII = mean(tail(na.omit(duration[func == INSERTION_KEY], -1))) / 1e6,
-    Communication = mean(tail(na.omit(duration[func == COMMUNICATION_KEY], -2))) / 1e6,
-    PostProcessing = mean(tail(na.omit(duration[func == HANDLE_KEY], -2))) / 1e6,
+    communication = mean(tail(na.omit(duration[func == COMMUNICATION_ALL_KEY], -1))) / 1e6,
+    postprocessing = 2 * mean(tail(na.omit(duration[func == HANDLE_KEY], -1))) / 1e6,
   ) %>%
   mutate(PreProcessing = PreProcessingI + PreProcessingII) %>%
   select(-PreProcessingI, -PreProcessingII)
@@ -41,13 +124,13 @@ data_long <- gather(overall_runtimes, key = "duration_type", value = "duration_v
 
 data_long$size <- as.factor(data_long$size)
 
-gewuenschte_reihenfolge <- c("PostProcessing", "Communication", "PreProcessing")  # Füge die tatsächlichen Phasen hinzu
+gewuenschte_reihenfolge <- c("postprocessing", "communication", "preprocessing")  # Füge die tatsächlichen Phasen hinzu
 
 # Setze die Faktorstufen in die gewünschte Reihenfolge
 data_long$duration_type <- factor(data_long$duration_type, levels = gewuenschte_reihenfolge)
 
 # Gestapeltes Balkendiagramm erstellen
-ggplot(data_long, aes(x = size, y = duration_value, fill = duration_type)) +
+p <- ggplot(data_long, aes(x = size, y = duration_value, fill = duration_type)) +
   geom_bar(stat = "identity") +
   labs(title = "Mean Durations of Udpate Process",
        x = "Number of Processes",
@@ -63,8 +146,7 @@ ggplot(data_long, aes(x = size, y = duration_value, fill = duration_type)) +
     legend.title = element_text(size = 14),    # Schriftgröße der Legende ändern
     legend.text = element_text(size = 14)     # Schriftgröße der Legendenbeschriftungen ändern
   )
-
-ggsave("overall-runtime-no-replan.pdf")
+ggsave("router-update-overall.png", plot = p, device = "png", width = 297, height = 210, units = "mm")
 
 # speedup diagramm für Aggregation
 ggplot(overall_runtimes, aes(x = size)) +
@@ -81,41 +163,52 @@ ggsave("preprocessing-speedup-no-replan.pdf")
 
 # barplot für Communication
 
-gather_lengths <- comm_traces %>%
+gather_lengths <- all_traces %>%
   filter(func == GATHER_LENGTHS_KEY & sim_time != 0) %>%
-  mutate(Index = rep(c(0, 1), length.out = nrow(.))) %>%
-  filter(Index == 0)
+  group_by(func, size, sim_time, rank) %>%
+  summarise(duration = sum(duration)) %>%
+  group_by(func, size) %>%
+  summarise(mean_duration = mean(duration))
 
-gather_tt <- comm_traces %>%
+x4 <- all_traces %>%
+  filter(size==4096) %>%
+    filter(func == COMMUNICATION_ALL_KEY & sim_time != 0) %>%
+    group_by(func, size, sim_time, rank) %>%
+  summarise(sum_duration = sum(duration), min_dur = min(duration), max_dur = max(duration), n = n())
+
+gather_tt <- all_traces %>%
   filter(func == GATHER_TT_KEY & sim_time != 0) %>%
-  mutate(Index = rep(c(0, 1), length.out = nrow(.))) %>%
-  filter(Index == 0)
+  group_by(func, size, sim_time, rank) %>%
+  summarise(duration = sum(duration)) %>%
+  group_by(func, size) %>%
+  summarise(mean_duration = mean(duration))
 
-deserial <- comm_traces %>%
+deserial <- all_traces %>%
   filter(func == DESERIALIZE_KEY & sim_time != 0) %>%
-  mutate(Index = rep(c(0, 1), length.out = nrow(.))) %>%
-  filter(Index == 0)
+  mutate(index = (row_number()-1)%/%2) %>%
+  group_by(func, size, index, rank) %>%
+  summarise(duration = sum(duration)) %>%
+  group_by(func, size) %>%
+  summarise(mean_duration = mean(duration))
 
-cc_traces <- bind_rows(gather_lengths, gather_tt,deserial, comm_traces %>%
-  filter(func != GATHER_LENGTHS_KEY, func != GATHER_TT_KEY, func != DESERIALIZE_KEY))
+cc_traces <- bind_rows(gather_lengths, gather_tt, deserial)
 
-communication_runtimes <- cc_traces %>%
-  group_by(size) %>%
-  summarise(
-    Sync = mean(tail(na.omit(duration[func == GATHER_LENGTHS_KEY], -2))) / 1e6,
-    "Gather Data" = mean(tail(na.omit(duration[func == GATHER_TT_KEY], -2))) / 1e6,
-    Deserialization = mean(tail(na.omit(duration[func == DESERIALIZE_KEY], -2))) / 1e6,
-  )
-
-comm_data_long <- gather(communication_runtimes, key = "duration_type", value = "duration_value", -size)
-
-comm_data_long$size <- as.factor(comm_data_long$size)
-
-ggplot(comm_data_long, aes(x = size, y = duration_value, fill = duration_type)) +
-  geom_bar(stat = "identity") +
+ggplot(cc_traces, aes(x = as.factor(size), y = mean_duration/1e6, fill = func)) +
+  geom_bar(stat = "identity", position = "stack") +
   labs(title = "Mean Durations of Comunication",
-       x = "#Partitions",
+       x = "Number of Processes",
        y = "Duration in ms") +
-  scale_fill_manual(name = "Phases", values = c("#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3")) +
-  theme_minimal()
-ggsave("phases-communication.pdf")
+  scale_fill_manual(name = "Phases", values = neon(), labels = c("deserialization", "sync", "data exchange")) +
+  theme_minimal() +
+  ggplot2::theme(
+    axis.title.x = element_text(size = 14),  # Schriftgröße der x-Achsenbeschriftung ändern
+    axis.title.y = element_text(size = 14),  # Schriftgröße der y-Achsenbeschriftung ändern
+    axis.text.x = element_text(size = 14),   # Schriftgröße der x-Achsentickbeschriftungen ändern
+    axis.text.y = element_text(size = 14),   # Schriftgröße der y-Achsentickbeschriftungen ändern
+    plot.title = element_text(size = 14) ,    # Schriftgröße des Plot-Titels ändern
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 14),# Schriftgröße der Legende ändern
+    legend.position = "bottom"   # Schriftgröße der Legendenbeschriftungen ändern
+  )
+ggsave("router-update-communication.png", plot = p, device = "png", width = 297, height = 210, units = "mm")
+
