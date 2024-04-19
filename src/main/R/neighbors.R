@@ -1,18 +1,20 @@
 library(tidyverse)
+library(wesanderson)
 source("./src/main/R/read_tracing_files.R")
 source("./src/main/R/colors.R")
 
 on_load <- function(data) {
   data %>%
     filter(bin_start > 0) %>%
-    filter(
-      func == "rust_q_sim::simulation::messaging::communication::communicators::handle_msgs" |
-        func == "rust_q_sim::simulation::messaging::communication::communicators::receive_msgs" |
-        func == "rust_q_sim::simulation::messaging::communication::communicators::send_msgs" |
-        func == "rust_q_sim::simulation::network::sim_network::move_links" |
-        func == "rust_q_sim::simulation::network::sim_network::move_nodes" |
-        func == "rust_q_sim::simulation::simulation::wakeup" |
-        func == "rust_q_sim::simulation::simulation::terminate_teleportation") %>%
+    # filter(
+    #   func == "rust_q_sim::simulation::messaging::communication::communicators::handle_msgs" |
+    #     func == "rust_q_sim::simulation::messaging::communication::communicators::receive_msgs" |
+    #     func == "rust_q_sim::simulation::messaging::communication::communicators::send_msgs" |
+    #     func == "rust_q_sim::simulation::network::sim_network::move_links" |
+    #     func == "rust_q_sim::simulation::network::sim_network::move_nodes" |
+    #     func == "rust_q_sim::simulation::simulation::wakeup" |
+    #     func == "rust_q_sim::simulation::simulation::terminate_teleportation") %>%
+    filter(func == "rust_q_sim::simulation::messaging::communication::communicators::receive_msgs") %>%
     mutate(func_name = sub(".*::", "", func)) %>%
     mutate(sim_time = bin_start) %>%
     mutate(duration = median_dur) %>%
@@ -30,21 +32,33 @@ neighbors <- neighbor_data %>%
 traces <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-empty/output-with-tracing",
                                     on_load = on_load, parallel = TRUE) %>%
   group_by(size, func) %>%
-  summarize(mean_dur = mean(duration), sum_dur = sum(duration))
+  summarize(mean_dur = mean(duration), sum_dur = sum(duration), max_dur = max(duration))
 messaging <- traces %>% filter(func == "receive_msgs")
 joined <- neighbors %>%
   left_join(messaging, join_by("size")) %>%
-  select(size, mean_neighbors, max_neighbors, mean_dur) %>%
-  mutate(duration_by_neighbor = mean_dur / mean_neighbors / 1e3) %>%
+  select(size, mean_neighbors, max_neighbors, mean_dur, max_dur) %>%
+  mutate(duration_by_neighbor = mean_dur / max_neighbors / 1e3) %>%
   filter(size != 1) %>%
-  pivot_longer(cols = c("mean_neighbors", "duration_by_neighbor"), values_to = "values", names_to = "class")
+  pivot_longer(cols = c("max_neighbors", "mean_neighbors", "duration_by_neighbor"), values_to = "values", names_to = "class") %>%
+  mutate(class = sapply(class, function(class_val) {
+    if (class_val == "max_neighbors") return("Max. neighbors")
+    if (class_val == "mean_neighbors") return("Avg. neighbors")
+    if (class_val == "duration_by_neighbor") return("Dur. by max. neighbors")
+  }))
 
 p <- ggplot(joined, aes(x = size, y = values, color = class)) +
   geom_line() +
   geom_point() +
   geom_text(data = joined, aes(label = round(values, 1)), vjust = -0.5, hjust = -0.05) +
   scale_x_log10() +
+  ggtitle("Avg. time to perform process synchronization and neighbor domains") +
+  xlab("Processes") +
+  ylab("Avg. execution time [\u00B5s] and #neighbors") +
+  labs(color = "Colors") +
+  scale_color_manual(values = wes_palette("Darjeeling1")) +
   theme_light()
+ggsave("neighbors.pdf", plot = p, device = "pdf", width = 210, height = 100, units = "mm")
+ggsave("neighbors.png", plot = p, device = "png", width = 210, height = 100, units = "mm")
 p
 
 

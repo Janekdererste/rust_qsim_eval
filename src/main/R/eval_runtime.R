@@ -53,7 +53,7 @@ berlin_empty <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQS
   group_by(size) %>%
   summarize(run_time = mean(median_dur) / 1e9) %>%
   mutate(rtr = 129600 / run_time) %>%
-  mutate(name = "berlin-empty")
+  mutate(name = "Dry Run")
 
 rvr_matsim_traces <- read_matsim_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/matsim-benchmark") %>%
   mutate(run_time = duration / 1e9) %>%
@@ -67,10 +67,10 @@ berlin_matsim_traces <- read_matsim_tracing_files("/Users/janek/Documents/writin
   select(size, run_time, rtr) %>%
   mutate(name = "matsim-berlin-25%")
 
-combined <- bind_rows(rvr_traces, berlin_in_link_traces, rvr_1pct_traces, berlin_traces, berlin_1pct_traces, rvr_matsim_traces, berlin_matsim_traces, berlin_logging_traces, berlin_empty)
+#combined <- bind_rows(rvr_traces, berlin_in_link_traces, rvr_1pct_traces, berlin_traces, berlin_1pct_traces, rvr_matsim_traces, berlin_matsim_traces, berlin_logging_traces, berlin_empty)
 #combined <- bind_rows(rvr_traces, rvr_1pct_traces, berlin_traces, berlin_1pct_traces,)
 #combined <- bind_rows(rvr_traces, berlin_traces, rvr_matsim_traces, berlin_matsim_traces)
-#combined <- bind_rows(rvr_traces, rvr_1pct_traces, rvr_matsim_traces, berlin_empty)
+combined <- bind_rows(rvr_traces, rvr_1pct_traces, rvr_matsim_traces, berlin_empty)
 max_values <- combined %>%
   group_by(name) %>%
   filter(size < 8000) %>%
@@ -96,8 +96,8 @@ p <- ggplot(combined, aes(x = size, y = rtr, color = as.factor(name))) +
   scale_y_log10() +
   scale_x_log10() +
   geom_text(data = max_values, aes(label = round(rtr, 1)), vjust = -0.0, hjust = -0.3) +
-  # scale_color_manual(values = wes_palette("Darjeeling1", n = 3)) +
-  scale_color_manual(values = qualitative()) +
+  scale_color_manual(values = wes_palette("Darjeeling1")) +
+  #scale_color_manual(values = qualitative()) +
   xlab("Number of Processes") +
   ylab("Real Time Ratio") +
   labs(color = "Run") +

@@ -23,7 +23,7 @@ on_load <- function(data) {
     select(size, rank, func, duration)
 }
 
-#
+
 # data <- read_binary_tracing_files(roots = c(
 #   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-1",
 #   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-2",
@@ -52,11 +52,29 @@ on_load <- function(data) {
 # data <- data %>%
 #   bind_rows(data_8192)
 
-data <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-empty/output-with-tracing",
-                                  on_load = on_load, parallel = TRUE) %>%
+data <- read_binary_tracing_files(c(
+  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-1",
+  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-2",
+  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-4",
+  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-8",
+  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-16",
+  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-32",
+  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-64",
+  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-256",
+  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-512",
+  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-1024",
+  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-2048",
+  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-4096"
+), on_load = on_load, parallel = TRUE)
+#
+# data <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-empty/output-with-tracing",
+#                                   on_load = on_load, parallel = TRUE) %>%
+#   group_by(size, func) %>%
+#   summarize(mean_dur = mean(duration), sum_dur = sum(duration))
+
+data <- data %>%
   group_by(size, func) %>%
   summarize(mean_dur = mean(duration), sum_dur = sum(duration))
-
 order <- c("receive_msgs", "send_msgs", "handle_msgs", "move_links", "move_nodes", "wakeup", "terminate_teleportation")
 colors_msging <- c("#feb70e", "#fece5a", "#fee5a6")
 colors_work <- c("#0e54fe", "#4178fe", "#739cfe", "#a6c0fe")
@@ -75,7 +93,10 @@ p1 <- ggplot(ordered_data, aes(x = as.factor(size), y = mean_dur / 1e3, fill = a
   ggtitle("Mean duration of performing one sim step") +
   scale_fill_manual(values = c(colors_msging, colors_work)) +
   theme_light()
+ggsave("acc_runtimes.pdf", plot = p1, device = "pdf", width = 210, height = 100, units = "mm")
+ggsave("acc_runtimes.png", plot = p1, device = "png", width = 210, height = 100, units = "mm")
 p1
+
 
 work <- ordered_data %>% filter(
   func == "wakeup" |
@@ -86,7 +107,7 @@ work <- ordered_data %>% filter(
 
 p2 <- ggplot(work, aes(x = as.factor(size), y = mean_dur / 1e3, fill = as.factor(func))) +
   geom_bar(stat = "identity", position = "stack") +
-  #facet_wrap(~category, scales = "free") +
+  facet_wrap(~category, scales = "free") +
   xlab("Number of Cores") +
   ylab("Mean Duration [\u00B5s]") +
   labs(fill = "Functions") +
@@ -96,9 +117,9 @@ p2 <- ggplot(work, aes(x = as.factor(size), y = mean_dur / 1e3, fill = as.factor
 p2
 
 messaging <- data %>% filter(
-  #func == "handle_msgs" |
-  func == "receive_msgs" #|
-  #  func == "send_msgs"
+  func == "handle_msgs" |
+    func == "receive_msgs" |
+    func == "send_msgs"
 )
 
 p3 <- ggplot(messaging, aes(x = as.factor(size), y = mean_dur / 1e3, fill = as.factor(func))) +

@@ -16,34 +16,18 @@ many <- function() {
     "#808080", "#ffffff")
 }
 
-neon <- function() {
-  c(blue(), pink(), yellow(), green(), gray())
+yellows <- function() {
+  c("#f0a202", "#f7bc38", "#ffd65d")
 }
 
-red <- function() {
-  "#ff0060"
+blues <- function() {
+  c("#044b7f", "#005ea9", "#0071d3", "#0083ff")
 }
 
-gray <- function() {
-  "#333333"
+palette <- function() {
+  c("#044B7F", "#F0A202", "#00A08A", "#FF0000", "#25291C")
 }
 
-green <- function() {
-  "#80D39B"
-}
-
-orange <- function() {
-  "#f5b700"
-}
-
-pink <- function() {
-  "#DE0D92"
-}
-
-blue <- function() {
-  "#2E86AB"
-}
-
-yellow <- function() {
-  "#F5F749"
+darjeeling1 <- function() {
+  c("#FF0000", "#00A08A", "#f0a202", "#044b7f", "#25291C")
 }
