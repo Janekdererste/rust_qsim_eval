@@ -87,7 +87,7 @@ p <- ggplot(combined_timings, aes(x = size, y = rtr, color = as.factor(name))) +
   ggtitle("Real Time Ratio for benchmark runs") +
   theme_light(base_size = 10) +
   theme(legend.position = "inside",
-        legend.justification = c(0.95, 0.05),
+        legend.justification = c(0.98, 0.02),
         legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
         plot.title = element_text(size = 12, face = "bold"),  # Set plot title to 8pt
         axis.title.x = element_text(size = 10),  # Set x-axis title to 8pt
@@ -126,14 +126,14 @@ ordered_data <- acc_runtimes %>%
 
 p <- ggplot(ordered_data, aes(x = as.factor(size), y = mean_dur / 1e3, fill = as.factor(func))) +
   geom_bar(stat = "identity", position = "stack") +
-  xlab("Number of Cores") +
+  xlab("Number of Processes") +
   ylab("Mean Duration [\u00B5s]") +
   labs(fill = "Phase") +
   ggtitle("Durations of algorithm phases - RVR-10%") +
   scale_fill_manual(values = c(yellows(), blues())) +
   theme_light(base_size = 10) +
   theme(legend.position = "inside",
-        legend.justification = c(0.95, 0.95),
+        legend.justification = c(0.98, 0.95),
         legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
         plot.title = element_text(size = 12, face = "bold"),  # Set plot title to 8pt
         axis.title.x = element_text(size = 10),  # Set x-axis title to 8pt
@@ -207,7 +207,7 @@ ordered_data_dry <- acc_runtimes_dry %>%
 
 p <- ggplot(ordered_data_dry, aes(x = as.factor(size), y = mean_dur / 1e3, fill = as.factor(func))) +
   geom_bar(stat = "identity", position = "stack") +
-  xlab("Number of Cores") +
+  xlab("Number of Processes") +
   ylab("Mean Duration [\u00B5s]") +
   labs(fill = "Phase") +
   ggtitle("Durations of algorithm phases - Dry Run") +
@@ -215,7 +215,7 @@ p <- ggplot(ordered_data_dry, aes(x = as.factor(size), y = mean_dur / 1e3, fill 
   theme_light(base_size = 8) +
   theme_light(base_size = 10) +
   theme(legend.position = "inside",
-        legend.justification = c(0.05, 0.95),
+        legend.justification = c(0.02, 0.95),
         legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
         plot.title = element_text(size = 12, face = "bold"),  # Set plot title to 8pt
         axis.title.x = element_text(size = 10),  # Set x-axis title to 8pt
@@ -226,49 +226,4 @@ p <- ggplot(ordered_data_dry, aes(x = as.factor(size), y = mean_dur / 1e3, fill 
         legend.text = element_text(size = 10))  # Sets legend at the bottom of the plot
 ggsave("dry_acc_runtimes.pdf", plot = p, device = "pdf", width = 118, height = 100, units = "mm")
 ggsave("dry_acc_runtimes.png", plot = p, device = "png", width = 118, height = 100, units = "mm")
-p
-
-neighbor_data <- read_neighbor_files("/Users/janek/hlrn/berlin-empty/output-with-tracing")
-neighbors <- neighbor_data %>%
-  group_by(size) %>%
-  summarize(mean_neighbors = mean(neighbors), max_neighbors = max(neighbors), min_neighbors = min(neighbors), .groups = "drop")
-messaging <- tracing_dry %>%
-  filter(func == "receive") %>%
-  group_by(size, func) %>%
-  summarize(mean_dur = mean(duration), sum_dur = sum(duration), max_dur = max(duration))
-joined <- neighbors %>%
-  left_join(messaging, join_by("size")) %>%
-  select(size, mean_neighbors, max_neighbors, mean_dur, max_dur) %>%
-  mutate(duration_by_neighbor = mean_dur / max_neighbors / 1e3) %>%
-  filter(size != 1) %>%
-  pivot_longer(cols = c("max_neighbors", "mean_neighbors", "duration_by_neighbor"), values_to = "values", names_to = "class") %>%
-  mutate(class = sapply(class, function(class_val) {
-    if (class_val == "max_neighbors") return("Max. neighbors")
-    if (class_val == "mean_neighbors") return("Avg. neighbors")
-    if (class_val == "duration_by_neighbor") return("Dur. 1 message")
-  }))
-
-p <- ggplot(joined, aes(x = size, y = values, color = class)) +
-  geom_line() +
-  geom_point() +
-  #geom_text(data = joined, aes(label = round(values, 1)), vjust = -0.7, hjust = 0.5, show.legend = FALSE) +
-  scale_x_log10() +
-  ggtitle("Neighbors and times for message exchange") +
-  xlab("Processes") +
-  ylab("Avg. execution time [\u00B5s] and #neighbors") +
-  labs(color = "Colors") +
-  scale_color_manual(values = palette()) +
-  theme_light(base_size = 10) +
-  theme(legend.position = "inside",
-        legend.justification = c(0.05, 0.95),
-        legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
-        plot.title = element_text(size = 12, face = "bold"),  # Set plot title to 8pt
-        axis.title.x = element_text(size = 10),  # Set x-axis title to 8pt
-        axis.title.y = element_text(size = 10),  # Set y-axis title to 8pt
-        axis.text.x = element_text(size = 10),  # Set x-axis text to 8pt
-        axis.text.y = element_text(size = 10),  # Set y-axis text to 8pt
-        legend.title = element_text(size = 10, face = "bold"),  # Set legend title to 8pt
-        legend.text = element_text(size = 10))  # Sets legend at the bottom of the plot
-ggsave("neighbors.pdf", plot = p, device = "pdf", width = 118, height = 100, units = "mm")
-ggsave("neighbors.png", plot = p, device = "png", width = 118, height = 100, units = "mm")
 p
