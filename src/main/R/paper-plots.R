@@ -32,6 +32,34 @@ on_load_tracing <- function(data) {
     select(size, sim_time, rank, func, duration)
 }
 
+plot_line <- function(data, x_var, y_var, color_var, title, x_label, y_label) {
+  p <- ggplot(data, aes_string(x = x_var, y = y_var, color = color_var)) +
+    geom_line() +
+    geom_point() +
+    scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format x-axis
+    scale_y_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format y-axis to display normal numbers
+    #geom_label(data = min_rtr, aes(label = rtr), vjust = -0.3, hjust = 0.35, show.legend = FALSE) +
+    #geom_label(data = max_rtr, aes(label = rtr), vjust = 1.3, hjust = 0.25, show.legend = FALSE) +
+    scale_color_manual(values = palette()) +
+    xlab(x_label) +
+    ylab(y_label) +
+    labs(color = "Setup") +
+    ggtitle(title) +
+    theme_light(base_size = 10) +
+    theme(legend.position = "inside",
+          legend.justification = c(0.98, 0.02),
+          legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
+          plot.title = element_text(size = 12, face = "bold"),  # Set plot title to 8pt
+          axis.title.x = element_text(size = 10),  # Set x-axis title to 8pt
+          axis.title.y = element_text(size = 10),  # Set y-axis title to 8pt
+          axis.text.x = element_text(size = 10),  # Set x-axis text to 8pt
+          axis.text.y = element_text(size = 10),  # Set y-axis text to 8pt
+          legend.title = element_text(size = 10, face = "bold"),  # Set legend title to 8pt
+          legend.text = element_text(size = 10))  # Sets legend at the bottom of the plot
+  
+  return(p)
+}
+
 # include timings of rvr-10%, rvr-1%, rvr-matsim-10%, and dry run
 rvr_timings <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-pre-cmp") %>%
   filter(func == "rust_q_sim::simulation::simulation::run") %>%
@@ -72,30 +100,38 @@ min_rtr <- combined_timings %>%
   filter(rtr == min(rtr)) %>%
   mutate(rtr = round(rtr, 0))
 
-p <- ggplot(combined_timings, aes(x = size, y = rtr, color = as.factor(name))) +
-  geom_line() +
-  geom_point() +
-  scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format x-axis
-  scale_y_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format y-axis to display normal numbers
+print(combined_timings)
+
+combined_timings <- combined_timings %>%
+  group_by(name) %>%
+  mutate(ref_run_time = run_time[size == 1]) %>%
+  mutate(speedup = ref_run_time / run_time) %>%
+  ungroup() 
+
+p <- plot_line(
+  data = combined_timings, x_var = "size", y_var = "speedup", color_var = "as.factor(name)",
+  title = "Speedups for benchmark runs",
+  x_label = "Number of processes",
+  y_label = "Relative speedup"
+)
+p
+
+p <- plot_line(
+  data = combined_timings, x_var = "size", y_var = "run_time", color_var = "as.factor(name)",
+  title = "Runtimes for benchmark runs",
+  x_label = "Number of processes",
+  y_label = "Relative speedup"
+) 
+p
+
+p <- plot_line(
+  data = combined_timings, x_var = "size", y_var = "rtr", color_var = "as.factor(name)",
+  title = "Real Time Ratio for benchmark runs",
+  x_label = "Number of processes",
+  y_label = "Real Time Ratio"
+) +
   geom_label(data = min_rtr, aes(label = rtr), vjust = -0.3, hjust = 0.35, show.legend = FALSE) +
-  geom_label(data = max_rtr, aes(label = rtr), vjust = 1.3, hjust = 0.25, show.legend = FALSE) +
-  #geom_label_repel(data = max_min_rtr, aes(label = rtr), min.segment.length = 0.1) +
-  scale_color_manual(values = palette()) +
-  xlab("Number of Processes") +
-  ylab("Real Time Ratio") +
-  labs(color = "Setup") +
-  ggtitle("Real Time Ratio for benchmark runs") +
-  theme_light(base_size = 10) +
-  theme(legend.position = "inside",
-        legend.justification = c(0.98, 0.02),
-        legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
-        plot.title = element_text(size = 12, face = "bold"),  # Set plot title to 8pt
-        axis.title.x = element_text(size = 10),  # Set x-axis title to 8pt
-        axis.title.y = element_text(size = 10),  # Set y-axis title to 8pt
-        axis.text.x = element_text(size = 10),  # Set x-axis text to 8pt
-        axis.text.y = element_text(size = 10),  # Set y-axis text to 8pt
-        legend.title = element_text(size = 10, face = "bold"),  # Set legend title to 8pt
-        legend.text = element_text(size = 10))  # Sets legend at the bottom of the plot
+  geom_label(data = max_rtr, aes(label = rtr), vjust = 1.3, hjust = 0.25, show.legend = FALSE)
 ggsave("rtr-hlrn.pdf", plot = p, device = "pdf", width = 118, height = 100, units = "mm")
 ggsave("rtr-hlrn.png", plot = p, device = "png", width = 118, height = 100, units = "mm")
 p
