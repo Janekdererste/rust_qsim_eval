@@ -11,7 +11,9 @@ detect_tracing <- function(roots, pattern) {
     dirs <- fs::dir_ls(root, recurse = TRUE, type = "directory")
     instrument_files <- mclapply(dirs, function(dir) {
       parent_dir <- basename(dirname(dir))
-      instrument_files <- list.files(dir, pattern = pattern, full.names = TRUE)
+      # we have read directories recursively, so only select dir/file pairs which are direct
+      # relatives
+      instrument_files <- list.files(dir, pattern = pattern, full.names = TRUE, recursive = FALSE)
       lapply(instrument_files, function(file) {
         c(dir = parent_dir, file = file)
       })

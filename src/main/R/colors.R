@@ -25,7 +25,7 @@ blues <- function() {
 }
 
 palette <- function() {
-  c("#044B7F", "#F0A202", "#00A08A", "#FF0000", "#25291C")
+  c("#044B7F", "#F0A202", "#FF0000", "#00A08A",  "#25291C")
 }
 
 darjeeling1 <- function() {

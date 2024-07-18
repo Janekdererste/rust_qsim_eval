@@ -65,6 +65,7 @@ wait_work <- read_binary_tracing_files(c(
   #"/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-256",
   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-1024"
 ), on_load, parallel = TRUE)
+print(wait_work)
 
 # wait_work <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-empty/output-with-tracing"
 #   , on_load, parallel = TRUE)

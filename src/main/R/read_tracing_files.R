@@ -18,9 +18,29 @@ read_binary_tracing_files <- function(roots, on_load = function(data) { return(d
   return(result)
 }
 
+read_csv_tracing_files <- function(roots, on_load = function(data) { return(data) }, parallel = FALSE) {
+  entries <- detect_csv_tracing(roots = roots)
+  files <- lapply(entries, function(entry) { entry["file"] })
+
+  if (parallel) {
+    tibbles <- mclapply(files, function(file) { read_csv_file(file, on_load) }, mc.cores = 12)
+  } else {
+    tibbles <- lapply(files, function(file) { read_csv_file(file, on_load) })
+  }
+  print(paste("Finished reading, binding", length(tibbles), "tibbles"))
+  result <- bind_rows(tibbles)
+  return(result)
+}
+
 read_binary_file <- function(file, on_load) {
   print(paste("Start reading file:", file))
   data <- read_rds(file)
+  on_load(data = data)
+}
+
+read_csv_file <- function(file, on_load) {
+  print(paste("Start reading file:", file))
+  data <- read_csv(file)
   on_load(data = data)
 }
 

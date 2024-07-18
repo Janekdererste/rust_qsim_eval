@@ -1,7 +1,13 @@
 library(tidyverse)
 library(scales)
+library(extrafont)
 source("./src/main/R/read_tracing_files.R")
 source("./src/main/R/colors.R")
+
+# Import and load fonts
+extrafont::font_import(prompt = FALSE)
+#fonts() this would list all installed fonts
+loadfonts(device = "pdf")
 
 function_names <- c("rust_q_sim::simulation::messaging::communication::communicators::send_msgs",
                     "rust_q_sim::simulation::messaging::communication::communicators::receive_msgs",
@@ -12,10 +18,10 @@ function_names <- c("rust_q_sim::simulation::messaging::communication::communica
                     "rust_q_sim::simulation::network::sim_network::move_links",
                     "rust_q_sim::simulation::messaging::events::finish",
                     "rust_q_sim::simulation::simulation::run")
-labels <- c("send", "receive", "handle", "activities", "teleport", "nodes", "links", "finish", "run")
-function_filter <- c("send", "receive", "handle", "activities", "teleport", "nodes", "links")
-work_filter <- c("activities", "teleport", "nodes", "links")
-comm_filter <- c("send", "receive", "handle")
+labels <- c("Send", "Receive", "Handle", "Finish activities", "Teleport", "Move nodes", "Move links", "finish", "run")
+function_filter <- c("Send", "Receive", "Handle", "Finish activities", "Teleport", "Move nodes", "Move links")
+work_filter <- c("Finish activities", "Teleport", "Move nodes", "Move links")
+comm_filter <- c("Send", "Receive", "Handle")
 func_to_label <- setNames(labels, function_names)
 
 match_func_labels <- function(func_value) {
@@ -36,10 +42,10 @@ plot_line <- function(data, x_var, y_var, color_var, title, x_label, y_label) {
   p <- ggplot(data, aes_string(x = x_var, y = y_var, color = color_var)) +
     geom_line() +
     geom_point() +
-    scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format x-axis
-    scale_y_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format y-axis to display normal numbers
     #geom_label(data = min_rtr, aes(label = rtr), vjust = -0.3, hjust = 0.35, show.legend = FALSE) +
     #geom_label(data = max_rtr, aes(label = rtr), vjust = 1.3, hjust = 0.25, show.legend = FALSE) +
+    scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format x-axis
+    scale_y_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format x-axis
     scale_color_manual(values = palette()) +
     xlab(x_label) +
     ylab(y_label) +
@@ -49,6 +55,7 @@ plot_line <- function(data, x_var, y_var, color_var, title, x_label, y_label) {
     theme(legend.position = "inside",
           legend.justification = c(0.98, 0.02),
           legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
+          #text = element_text(family="Roboto Slab"),
           plot.title = element_text(size = 12, face = "bold"),  # Set plot title to 8pt
           axis.title.x = element_text(size = 10),  # Set x-axis title to 8pt
           axis.title.y = element_text(size = 10),  # Set y-axis title to 8pt
@@ -86,7 +93,7 @@ berlin_empty_timings <- read_binary_tracing_files("/Users/janek/Documents/writin
   group_by(size) %>%
   summarize(run_time = mean(median_dur) / 1e9) %>%
   mutate(rtr = 129600 / run_time) %>%
-  mutate(name = "Dry Run")
+  mutate(name = "Baseline Run")
 
 combined_timings <- bind_rows(rvr_timings, rvr_1pct_timings, rvr_matsim_timings, berlin_empty_timings)
 max_rtr <- combined_timings %>%
@@ -106,22 +113,18 @@ combined_timings <- combined_timings %>%
   group_by(name) %>%
   mutate(ref_run_time = run_time[size == 1]) %>%
   mutate(speedup = ref_run_time / run_time) %>%
+  mutate(efficiency = speedup / size) %>%
   ungroup() 
 
-p <- plot_line(
-  data = combined_timings, x_var = "size", y_var = "speedup", color_var = "as.factor(name)",
-  title = "Speedups for benchmark runs",
-  x_label = "Number of processes",
-  y_label = "Relative speedup"
-)
-p
+up_to_thousand <- combined_timings %>%
+  filter(size < 2000)
 
-p <- plot_line(
-  data = combined_timings, x_var = "size", y_var = "run_time", color_var = "as.factor(name)",
-  title = "Runtimes for benchmark runs",
-  x_label = "Number of processes",
-  y_label = "Relative speedup"
-) 
+p <- ggplot(up_to_thousand, aes(size, efficiency, color = as.factor(name))) +
+  geom_line() +
+  geom_point() +
+  scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format x-axis
+  scale_color_manual(values = palette()) +
+  theme_light()
 p
 
 p <- plot_line(
@@ -135,6 +138,7 @@ p <- plot_line(
 ggsave("rtr-hlrn.pdf", plot = p, device = "pdf", width = 118, height = 100, units = "mm")
 ggsave("rtr-hlrn.png", plot = p, device = "png", width = 118, height = 100, units = "mm")
 p
+embed_fonts("rtr-hlrn.pdf", outfile = "rtr-hlrn-embedded.pdf")
 
 # load tracing data for rvr-10%
 tracing_rvr <- read_binary_tracing_files(c(
@@ -165,7 +169,7 @@ p <- ggplot(ordered_data, aes(x = as.factor(size), y = mean_dur / 1e3, fill = as
   xlab("Number of Processes") +
   ylab("Mean Duration [\u00B5s]") +
   labs(fill = "Phase") +
-  ggtitle("Durations of algorithm phases - RVR-10%") +
+  ggtitle("Durations of algorithm phases - Prototype-10%") +
   scale_fill_manual(values = c(yellows(), blues())) +
   theme_light(base_size = 10) +
   theme(legend.position = "inside",
@@ -185,36 +189,41 @@ p
 work <- tracing_rvr %>%
   filter(func %in% work_filter) %>%
   pivot_wider(names_from = func, values_from = duration) %>%
-  mutate(duration = activities +
-    teleport +
-    nodes +
-    links) %>%
-  mutate(phase = "Work") %>%
+  mutate(duration = `Finish activities` + `Teleport` + `Move nodes` + `Move links`) %>%
+  mutate(phase = "Waiting") %>%
   group_by(sim_time, size, phase) %>%
   summarize(dur = max(duration) - min(duration), .groups = 'drop')
 
 comm <- tracing_rvr %>%
   filter(func %in% comm_filter) %>%
   pivot_wider(names_from = func, values_from = duration) %>%
-  mutate(duration = receive) %>%
-  mutate(phase = "Communication") %>%
+  mutate(duration = Receive) %>%
+  mutate(phase = "Max. comm") %>%
   group_by(sim_time, size, phase) %>%
   summarize(dur = max(duration), .groups = 'drop')
 
 work_comm <- bind_rows(work, comm) %>%
-  filter(size %in% c(16, 64, 1024))
+  filter(size %in% c(16, 64, 1024)) %>%
+  pivot_wider(names_from = phase, values_from = dur) %>%
+  mutate(`Msg. exchange` = `Max. comm` - `Waiting`) %>%
+  pivot_longer(cols = c("Max. comm", "Waiting", "Msg. exchange"), names_to = "phase", values_to = "dur") %>%
+  mutate(sim_time_posix = as.POSIXct(sim_time, origin = "1970-01-01", tz = "UTC")) %>%
+  mutate(phase = factor(phase, levels = c("Waiting", "Max. comm", "Msg. exchange"))) %>%
+  arrange(phase)
 
-p <- ggplot(work_comm, aes(sim_time, dur / 1e3, color = as.factor(phase))) +
-  geom_point(shape = '.') +
+p <- ggplot(work_comm, aes(sim_time_posix, dur / 1e3, color = as.factor(phase))) +
+  geom_point(shape = '.', alpha = 0.8) +
   facet_wrap(~size, scales = "fixed") +
   #scale_y_log10() +
   ylim(0, 300) +
-  ggtitle("Max. duration of comm. and diff. between max. and min. duration for simulation work ") +
-  ylab("Max. Duration [\u00B5s]") +
+  scale_x_datetime(labels = date_format("%H:%M", tz = "UTC")) +
+  #scale_x_continuous(labels = scales::comma) +  # Format x-axis labels
+  ggtitle("Timings for individual timesteps") +
+  ylab("Duration [\u00B5s]") +
   xlab("Simulation Time") +
   labs(color = "Phase") +
   guides(color = guide_legend(override.aes = list(size = 2, alpha = 1.0, shape = 19))) +
-  scale_color_manual(values = c(yellows()[1], blues()[1])) +
+  scale_color_manual(values = palette() ) +
   theme_light(base_size = 10) +
   theme(legend.position = "inside",
         legend.justification = c(0.98, 0.95),
@@ -222,7 +231,7 @@ p <- ggplot(work_comm, aes(sim_time, dur / 1e3, color = as.factor(phase))) +
         plot.title = element_text(size = 12, face = "bold"),  # Set plot title to 8pt
         axis.title.x = element_text(size = 10),  # Set x-axis title to 8pt
         axis.title.y = element_text(size = 10),  # Set y-axis title to 8pt
-        axis.text.x = element_text(size = 10),  # Set x-axis text to 8pt
+        axis.text.x = element_text(size = 10, angle = 45, hjust = 1),  # Set x-axis text to 8pt
         axis.text.y = element_text(size = 10),  # Set y-axis text to 8pt
         legend.title = element_text(size = 10, face = "bold"),  # Set legend title to 8pt
         legend.text = element_text(size = 10))  # Sets legend at the bottom of the plot
@@ -246,17 +255,17 @@ p <- ggplot(ordered_data_dry, aes(x = as.factor(size), y = mean_dur / 1e3, fill 
   xlab("Number of Processes") +
   ylab("Mean Duration [\u00B5s]") +
   labs(fill = "Phase") +
-  ggtitle("Durations of algorithm phases - Dry Run") +
+  ggtitle("Durations of algorithm phases - Baseline Run") +
   scale_fill_manual(values = c(yellows(), blues())) +
   theme_light(base_size = 8) +
   theme_light(base_size = 10) +
-  theme(legend.position = "inside",
+  theme(legend.position = "none",
         legend.justification = c(0.02, 0.95),
         legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
         plot.title = element_text(size = 12, face = "bold"),  # Set plot title to 8pt
         axis.title.x = element_text(size = 10),  # Set x-axis title to 8pt
         axis.title.y = element_text(size = 10),  # Set y-axis title to 8pt
-        axis.text.x = element_text(size = 10),  # Set x-axis text to 8pt
+        axis.text.x = element_text(size = 10),  # Set x-axis text to 8pt 
         axis.text.y = element_text(size = 10),  # Set y-axis text to 8pt
         legend.title = element_text(size = 10, face = "bold"),  # Set legend title to 8pt
         legend.text = element_text(size = 10))  # Sets legend at the bottom of the plot
