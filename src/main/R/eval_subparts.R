@@ -40,6 +40,17 @@ on_load <- function(data) {
   bind_rows(work, wait)
 }
 
+on_load_runtime <- function(data) {
+  transformed <- data %>%
+    filter(
+      func == "rust_q_sim::simulation::simulation::run") %>%
+    mutate(func_name = sub(".*::", "", func)) %>%
+    mutate(duration = median_dur) %>%
+    mutate(func = func_name) %>%
+    select(size, rank, func, duration)
+  transformed
+}
+
 #
 # wait_work <- read_binary_tracing_files(c(
 #   #"/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-2",
@@ -57,15 +68,43 @@ on_load <- function(data) {
 #   #   # "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-25pct/output-trace-pre-cmp/size-8192"
 # ), on_load, parallel = TRUE)
 
+# wait_work <- read_binary_tracing_files(c(
+#   #"/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-8",
+#   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-16",
+#   #"/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-32",
+#   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-64",
+#   #"/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-256",
+#   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-1024"
+# ), on_load, parallel = TRUE)
+# print(wait_work)
+
 wait_work <- read_binary_tracing_files(c(
-  #"/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-8",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-16",
-  #"/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-32",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-64",
-  #"/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-256",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-1024"
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-16",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-64",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-256"
 ), on_load, parallel = TRUE)
 print(wait_work)
+
+runtimes <- read_binary_tracing_files(c(
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-1",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-2",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-4",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-8",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-16",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-32",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-64",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-128",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-256",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-512"
+), on_load = on_load_runtime, parallel = TRUE)
+
+p <- ggplot(runtimes, aes(x = size, y = duration / 1e9)) +
+  geom_line() +
+  geom_point() +
+  scale_y_log10() +
+  scale_x_log10() +
+  theme_light()
+p
 
 # wait_work <- read_binary_tracing_files("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/berlin-v6.0-empty/output-with-tracing"
 #   , on_load, parallel = TRUE)
@@ -75,8 +114,8 @@ print(wait_work)
 
 wait_work_by_size <- wait_work %>%
   group_by(sim_time, size, name) %>%
-  summarize(max_dur = max(duration), diff_dur = max(duration) - min(duration), .groups = 'drop') %>%
-  filter(diff_dur < 300000)
+  summarize(max_dur = max(duration), diff_dur = max(duration) - min(duration), .groups = 'drop') # %>%
+#filter(diff_dur < 300000)
 
 p <- ggplot(wait_work_by_size, aes(sim_time, max_dur / 1e3, color = as.factor(name))) +
   geom_point(shape = '.') +
@@ -89,8 +128,8 @@ p <- ggplot(wait_work_by_size, aes(sim_time, max_dur / 1e3, color = as.factor(na
   guides(color = guide_legend(override.aes = list(size = 2, alpha = 1.0, shape = 1))) +
   scale_color_manual(values = c("#feb70e", "#0e54fe")) +
   theme_light()
-ggsave("work-wait-hlrn.pdf", plot = p, device = "pdf", width = 210, height = 118, units = "mm")
-ggsave("work-wait-hlrn.png", plot = p, device = "png", width = 210, height = 118, units = "mm")
+#ggsave("work-wait-hlrn.pdf", plot = p, device = "pdf", width = 210, height = 118, units = "mm")
+#ggsave("work-wait-hlrn.png", plot = p, device = "png", width = 210, height = 118, units = "mm")
 p
 
 p <- ggplot(wait_work_by_size, aes(sim_time, diff_dur / 1e3, color = as.factor(name))) +
@@ -113,7 +152,7 @@ p <- ggplot(wait_work_by_size, aes(sim_time, max_dur / 1e3, color = as.factor(si
   geom_point(shape = '.') +
   facet_wrap(~name) +
   #scale_y_log10() +
-  ylim(0, 400) +
+  #ylim(0, 400) +
   scale_color_manual(values = qualitative()) +
   ylab("Max. Duration [\u00B5s]") +
   guides(color = guide_legend(override.aes = list(size = 2, alpha = 1.0, shape = 1))) +
@@ -144,6 +183,7 @@ p_16_diff <- ggplot(work_16, aes(x = sim_time, y = rank, fill = diff_to_min / 1e
   labs(fill = "Diff. [\u00B5s]") +
   ggtitle(paste("Difference to fastest work time for 16 Cores")) +
   theme_light()
+p_16_diff
 
 p_1024_diff <- ggplot(work_1024, aes(x = sim_time, y = rank, fill = diff_to_min / 1e3)) +
   geom_raster() +

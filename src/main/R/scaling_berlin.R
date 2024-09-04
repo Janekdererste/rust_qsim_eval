@@ -19,29 +19,29 @@ p <- ggplot(efficiency, aes(x = size, y = efficiency)) +
   theme_light()
 p
 strong_scaling_01 <- read_binary_tracing_files("/Users/janek/hlrn/strong-scaling/berlin/berlin-0.1pct/") %>%
-  mutate(name = "00.1")
+  mutate(name = "00.1", index = 1)
 strong_scaling_02 <- read_binary_tracing_files("/Users/janek/hlrn/strong-scaling/berlin/berlin-0.2pct/") %>%
-  mutate(name = "00.2")
+  mutate(name = "00.2", index = 2)
 strong_scaling_04 <- read_binary_tracing_files("/Users/janek/hlrn/strong-scaling/berlin/berlin-0.4pct/") %>%
-  mutate(name = "00.4")
+  mutate(name = "00.4", index = 3)
 strong_scaling_08 <- read_binary_tracing_files("/Users/janek/hlrn/strong-scaling/berlin/berlin-0.8pct/") %>%
-  mutate(name = "00.8")
+  mutate(name = "00.8", index = 4)
 strong_scaling_16 <- read_binary_tracing_files("/Users/janek/hlrn/strong-scaling/berlin/berlin-1.6pct/") %>%
-  mutate(name = "01.6")
+  mutate(name = "01.6", index = 5)
 strong_scaling_32 <- read_binary_tracing_files("/Users/janek/hlrn/strong-scaling/berlin/berlin-3.2pct/") %>%
-  mutate(name = "03.2")
+  mutate(name = "03.2", index = 6)
 strong_scaling_64 <- read_binary_tracing_files("/Users/janek/hlrn/strong-scaling/berlin/berlin-6.4pct/") %>%
-  mutate(name = "06.4")
+  mutate(name = "06.4", index = 7)
 strong_scaling_128 <- read_binary_tracing_files("/Users/janek/hlrn/strong-scaling/berlin/berlin-12.8pct/") %>%
-  mutate(name = "12.8")
+  mutate(name = "12.8", index = 8)
 strong_scaling_256 <- read_binary_tracing_files("/Users/janek/hlrn/strong-scaling/berlin/berlin-25.6pct/") %>%
-  mutate(name = "25.6")
+  mutate(name = "25.6", index = 9)
 strong_scaling_512 <- read_binary_tracing_files("/Users/janek/hlrn/strong-scaling/berlin/berlin-51.2pct/") %>%
-  mutate(name = "51.2")
+  mutate(name = "51.2", index = 10)
 strong_scaling_1024 <- read_binary_tracing_files("/Users/janek/hlrn/strong-scaling/berlin/berlin-102.4pct/") %>%
-  mutate(name = "102.4")
+  mutate(name = "102.4", index = 11)
 strong_scaling_2048 <- read_binary_tracing_files("/Users/janek/hlrn/strong-scaling/berlin/berlin-204.8pct/") %>%
-  mutate(name = "202.8")
+  mutate(name = "204.8", index = 12)
 
 strong_scaling <- bind_rows(
   strong_scaling_01,
@@ -64,6 +64,18 @@ p <- ggplot(strong_scaling, aes(x = size, y = mean_dur / 1e9, color = as.factor(
   labs(color = "Scenario Size in %") +
   scale_x_log10() +
   scale_y_log10() +
+  theme_light()
+p
+
+bla <- strong_scaling %>%
+  filter(size == 2^(index - 1))
+
+p <- ggplot(bla, aes(x = size, y = mean_dur / 1e9)) +
+  geom_line() +
+  geom_point() +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_label(aes(label = name)) +
   theme_light()
 p
 

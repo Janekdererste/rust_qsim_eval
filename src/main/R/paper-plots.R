@@ -5,9 +5,9 @@ source("./src/main/R/read_tracing_files.R")
 source("./src/main/R/colors.R")
 
 # Import and load fonts
-extrafont::font_import(prompt = FALSE)
+#extrafont::font_import(prompt = FALSE)
 #fonts() this would list all installed fonts
-loadfonts(device = "pdf")
+#loadfonts(device = "pdf")
 
 function_names <- c("rust_q_sim::simulation::messaging::communication::communicators::send_msgs",
                     "rust_q_sim::simulation::messaging::communication::communicators::receive_msgs",
@@ -18,7 +18,7 @@ function_names <- c("rust_q_sim::simulation::messaging::communication::communica
                     "rust_q_sim::simulation::network::sim_network::move_links",
                     "rust_q_sim::simulation::messaging::events::finish",
                     "rust_q_sim::simulation::simulation::run")
-labels <- c("Send", "Receive", "Handle", "Finish activities", "Teleport", "Move nodes", "Move links", "finish", "run")
+labels <- c("Send", "Receive", "Handle", "Finish activities", "Teleport", "Move nodes", "Move links", "Finish", "Run")
 function_filter <- c("Send", "Receive", "Handle", "Finish activities", "Teleport", "Move nodes", "Move links")
 work_filter <- c("Finish activities", "Teleport", "Move nodes", "Move links")
 comm_filter <- c("Send", "Receive", "Handle")
@@ -63,7 +63,7 @@ plot_line <- function(data, x_var, y_var, color_var, title, x_label, y_label) {
           axis.text.y = element_text(size = 10),  # Set y-axis text to 8pt
           legend.title = element_text(size = 10, face = "bold"),  # Set legend title to 8pt
           legend.text = element_text(size = 10))  # Sets legend at the bottom of the plot
-  
+
   return(p)
 }
 
@@ -114,14 +114,15 @@ combined_timings <- combined_timings %>%
   mutate(ref_run_time = run_time[size == 1]) %>%
   mutate(speedup = ref_run_time / run_time) %>%
   mutate(efficiency = speedup / size) %>%
-  ungroup() 
+  ungroup()
 
 up_to_thousand <- combined_timings %>%
-  filter(size < 2000)
+  filter(name != "QSim 10%")
 
-p <- ggplot(up_to_thousand, aes(size, efficiency, color = as.factor(name))) +
+p <- ggplot(up_to_thousand, aes(size, run_time, color = as.factor(name))) +
   geom_line() +
   geom_point() +
+  scale_y_log10() +
   scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format x-axis
   scale_color_manual(values = palette()) +
   theme_light()
@@ -140,20 +141,32 @@ ggsave("rtr-hlrn.png", plot = p, device = "png", width = 118, height = 100, unit
 p
 embed_fonts("rtr-hlrn.pdf", outfile = "rtr-hlrn-embedded.pdf")
 
-# load tracing data for rvr-10%
+# # load tracing data for rvr-10%
+# tracing_rvr <- read_binary_tracing_files(c(
+#   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-1",
+#   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-2",
+#   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-4",
+#   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-8",
+#   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-16",
+#   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-32",
+#   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-64",
+#   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-256",
+#   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-512",
+#   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-1024"
+#   # "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-2048",
+#   # "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-4096"
+# ), on_load = on_load_tracing, parallel = TRUE)
+
 tracing_rvr <- read_binary_tracing_files(c(
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-1",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-2",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-4",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-8",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-16",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-32",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-64",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-256",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-512",
-  "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-1024"
-  # "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-2048",
-  # "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/rvr-v1.4-10pct/output-trace-pre-cmp/size-4096"
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-1",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-2",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-4",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-8",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-16",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-32",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-64",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-128",
+  "/Users/janek/hlrn/strong-scaling/rvr/rvr-102.4pct/output-tracing/size-256"
 ), on_load = on_load_tracing, parallel = TRUE)
 
 acc_runtimes <- tracing_rvr %>%
@@ -189,7 +202,10 @@ p
 work <- tracing_rvr %>%
   filter(func %in% work_filter) %>%
   pivot_wider(names_from = func, values_from = duration) %>%
-  mutate(duration = `Finish activities` + `Teleport` + `Move nodes` + `Move links`) %>%
+  mutate(duration = `Finish activities` +
+    `Teleport` +
+    `Move nodes` +
+    `Move links`) %>%
   mutate(phase = "Waiting") %>%
   group_by(sim_time, size, phase) %>%
   summarize(dur = max(duration) - min(duration), .groups = 'drop')
@@ -203,7 +219,7 @@ comm <- tracing_rvr %>%
   summarize(dur = max(duration), .groups = 'drop')
 
 work_comm <- bind_rows(work, comm) %>%
-  filter(size %in% c(16, 64, 1024)) %>%
+  filter(size %in% c(16, 64, 256)) %>%
   pivot_wider(names_from = phase, values_from = dur) %>%
   mutate(`Msg. exchange` = `Max. comm` - `Waiting`) %>%
   pivot_longer(cols = c("Max. comm", "Waiting", "Msg. exchange"), names_to = "phase", values_to = "dur") %>%
@@ -214,8 +230,8 @@ work_comm <- bind_rows(work, comm) %>%
 p <- ggplot(work_comm, aes(sim_time_posix, dur / 1e3, color = as.factor(phase))) +
   geom_point(shape = '.', alpha = 0.8) +
   facet_wrap(~size, scales = "fixed") +
-  #scale_y_log10() +
-  ylim(0, 300) +
+  scale_y_log10() +
+  #ylim(0, 300) +
   scale_x_datetime(labels = date_format("%H:%M", tz = "UTC")) +
   #scale_x_continuous(labels = scales::comma) +  # Format x-axis labels
   ggtitle("Timings for individual timesteps") +
@@ -223,7 +239,7 @@ p <- ggplot(work_comm, aes(sim_time_posix, dur / 1e3, color = as.factor(phase)))
   xlab("Simulation Time") +
   labs(color = "Phase") +
   guides(color = guide_legend(override.aes = list(size = 2, alpha = 1.0, shape = 19))) +
-  scale_color_manual(values = palette() ) +
+  scale_color_manual(values = palette()) +
   theme_light(base_size = 10) +
   theme(legend.position = "inside",
         legend.justification = c(0.98, 0.95),
