@@ -55,32 +55,64 @@ strong_scaling <- bind_rows(
   strong_scaling_256,
   strong_scaling_512,
   strong_scaling_1024,
-  strong_scaling_2048)
+  strong_scaling_2048) %>%
+  mutate(name = factor(name, levels = unique(name[order(index)]))) %>%
+  group_by(name) %>%
+  mutate(speedup = mean_dur[size == 1] / median_dur) %>%
+  ungroup() %>%
+  mutate(efficiency = speedup / size)
 
-p <- ggplot(strong_scaling, aes(x = size, y = mean_dur / 1e9, color = as.factor(name))) +
+p <- ggplot(strong_scaling, aes(x = size, y = mean_dur / 1e9, color = name)) +
   geom_line() +
   geom_point() +
   #geom_label(data = speedup_001, aes(label = mean_dur / 1e9)) +
   labs(color = "Scenario Size in %") +
   scale_x_log10() +
   scale_y_log10() +
+  ggtitle("Runtimes Berlin-Scenario") +
+  ylab("Runtime [s]") +
+  xlab("# Processes") +
   theme_light()
 p
 
-bla <- strong_scaling %>%
-  filter(size == 2^(index - 1))
-
-p <- ggplot(bla, aes(x = size, y = mean_dur / 1e9)) +
+p <- ggplot(strong_scaling, aes(x = size, y = speedup, color = name)) +
   geom_line() +
   geom_point() +
+  #geom_label(data = speedup_001, aes(label = mean_dur / 1e9)) +
+  labs(color = "Scenario Size in %") +
   scale_x_log10() +
   scale_y_log10() +
-  geom_label(aes(label = name)) +
+  ggtitle("Speedups Berlin-Scenario") +
+  ylab("Speedup") +
+  xlab("# Processes") +
   theme_light()
 p
 
-ggplot(speedup_001, aes(x = size, y = speedup)) +
-  geom_line(color = "red") +
-  geom_point(color = "red") +
-  labs(title = "Speedup for 0.1% Sample", x = "# Processes", y = "Speedup") +
-  theme_light(base_size = 14)
+p <- ggplot(strong_scaling, aes(x = size, y = efficiency, color = name)) +
+  geom_line() +
+  geom_point() +
+  #geom_label(data = speedup_001, aes(label = mean_dur / 1e9)) +
+  labs(color = "Scenario Size in %") +
+  scale_x_log10() +
+  scale_y_log10() +
+  ggtitle("Efficiency Berlin-Scenario") +
+  ylab("Efficiency") +
+  xlab("# Processes") +
+  theme_light()
+p
+
+
+weak_scaling <- strong_scaling %>%
+  filter(size == 2^(index))
+
+p <- ggplot(weak_scaling, aes(x = size, y = mean_dur / 1e9)) +
+  geom_line() +
+  geom_point() +
+  geom_label(aes(label = name)) +
+  scale_y_log10() +
+  scale_x_log10() +
+  ggtitle("Weak Scaling - Berlin-Scenario") +
+  ylab("Runtime [s]") +
+  xlab("# Processes") +
+  theme_light()
+p

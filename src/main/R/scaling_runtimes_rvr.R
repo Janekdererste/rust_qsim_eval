@@ -48,11 +48,24 @@ strong_scaling <- bind_rows(
   ungroup() %>%
   mutate(efficiency = speedup / size)
 
-print(strong_scaling)
+runtime_64_1 <- strong_scaling %>%
+  filter(size == 1) %>%
+  filter(name == "12.8") %>%
+  pull(mean_dur) %>%
+  as.numeric()
+
+func <- function(p) {
+  t_cmp <- runtime_64_1 * 1e-9 / p
+  #N_nb <- 2 * (3 * sqrt(p) - 1) * (sqrt(p) - 1) / p
+  N_nb <- 10 * 2
+  t_lt <- N_nb * 1e-6 * 129600
+  return(t_cmp + t_lt)
+}
 
 p <- ggplot(strong_scaling, aes(x = size, y = mean_dur / 1e9, color = name)) +
   geom_line() +
   geom_point() +
+  stat_function(fun = func, color = "#F0A202") +
   #geom_label(data = speedup_001, aes(label = mean_dur / 1e9)) +
   labs(color = "Scenario Size in %") +
   scale_x_log10() +
@@ -91,7 +104,7 @@ p
 
 
 weak_scaling <- strong_scaling %>%
-  filter(size == 2^(index - 1))
+  filter(size == 2^(index + 3))
 
 p <- ggplot(weak_scaling, aes(x = size, y = mean_dur / 1e9)) +
   geom_line() +
