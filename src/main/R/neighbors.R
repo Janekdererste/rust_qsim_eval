@@ -23,6 +23,22 @@ on_load <- function(data) {
 }
 
 
+neighbor_data <- read_csv("/Users/janek/hlrn/strong-scaling/rvr/rvr-0.0pct/input/rvr-0.0pct.neighbors.csv") %>%
+  group_by(size) %>%
+  summarize(mean_neighbors = mean(neighbors), median_neighbors = median(neighbors), max_neighbors = max(neighbors), min_neighbors = min(neighbors), .groups = "drop")
+
+ggplot(neighbor_data, aes(x = size)) +
+  geom_point(aes(y = min_neighbors), color = "grey") +
+  geom_line(aes(y = min_neighbors), color = "grey") +
+  geom_point(aes(y = max_neighbors), color = "red") +
+  geom_line(aes(y = max_neighbors), color = "red") +
+  geom_point(aes(y = mean_neighbors), color = "blue") +
+  geom_line(aes(y = mean_neighbors), color = "blue") +
+  geom_point(aes(y = median_neighbors), color = "green") +
+  geom_line(aes(y = median_neighbors), color = "green") +
+  theme_light()
+
+
 neighbor_data <- read_neighbor_files("/Users/janek/hlrn/berlin-empty/output-with-tracing")
 
 neighbors <- neighbor_data %>%
