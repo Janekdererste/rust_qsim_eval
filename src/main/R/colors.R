@@ -33,7 +33,7 @@ red <- function() {
 }
 
 palette2 <- function() {
-  c("#044B7F", "#bae342", "#25291C", "#00A08A", "#FF0000", "#F0A202")
+  c("#044B7F", "#F0A202", "#25291C", "#00A08A", "#FF0000", "#bae342")
 }
 
 darjeeling1 <- function() {

@@ -38,6 +38,18 @@ on_load_tracing <- function(data) {
     select(size, sim_time, rank, func, duration)
 }
 
+timings_mobiliti <- function() {
+  # Create a tibble with the given data
+  tibble(
+    size = c(1, 64, 128, 256, 512, 1024),
+    run_time = c(21600, 310, 150, 80, 40, 21)
+  ) %>%
+    mutate(rtr = 86400 / run_time) %>%
+    mutate(speedup = run_time[1] / run_time) %>%
+    mutate(name = "Mobiliti")
+}
+
+#-------------- Read tracing data ---------------
 tracing_10pct <- read_binary_tracing_files(
   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/scaling-tracing/instrument-10.0",
   on_load = on_load_tracing, parallel = TRUE)
@@ -47,6 +59,7 @@ tracing_0pct <- read_binary_tracing_files(
   on_load = on_load_tracing, parallel = TRUE
 )
 
+#--------------- Read timing data ----------------
 timings_0pct <- read_binary_tracing_files(
   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/scaling-runtimes/instrument/rvr-0.0pct",
 ) %>%
@@ -106,9 +119,9 @@ combined_timings <- bind_rows(
   timings_3pct,
   timings_5pct,
   timings_10pct,
-  timings_qsim_10pct
 )
 
+#----------------- Plot RTR and Speedups Benchmark -----------------
 max_rtr <- combined_timings %>%
   group_by(name) %>%
   filter(name == "Prototype 10%" |
@@ -130,39 +143,17 @@ combined_timings <- combined_timings %>%
   mutate(speedup = ref_run_time / run_time) %>%
   mutate(efficiency = speedup / size) %>%
   ungroup() %>%
-  mutate(name = fct_relevel(name, c("Prototype 0%", "Prototype 1%", "Prototype 3%", "Prototype 5%", "Prototype 10%", "QSim 10%")))
-
-runtime_10pct_1 <- timings_10pct %>%
-  filter(size == 1) %>%
-  pull(run_time) %>%
-  as.numeric()
-runtime_1pct_1 <- timings_1pct %>%
-  filter(size == 1) %>%
-  pull(run_time) %>%
-  as.numeric()
-
-theoretical_rtr <- function(min_val, p) {
-  t_cmp <- min_val / p
-  N_nb <- 2 * (8 * sqrt(p) - 1) * (sqrt(p) - 1) / p
-  #N_nb <- 10 / (1 + exp(-0.2 * (p - 32.5)))
-  #bla <- p - 1
-  # N_nb <- min(20, bla)
-  t_lt <- 2 * N_nb * 1e-6 * 129600
-  rtr <- 129600 / (t_cmp + t_lt)
-  return(rtr)
-}
+  mutate(name = fct_relevel(name, c("Prototype 0%", "Prototype 1%", "Prototype 3%", "Prototype 5%", "Prototype 10%")))
 
 p1 <- ggplot(combined_timings, aes(x = size, y = rtr, color = as.factor(name))) +
   geom_line() +
   geom_point() +
-  #stat_function(fun = function(x) { theoretical_rtr(runtime_10pct_1, x) }, color = red(), linetype = "dotted") +
-  #stat_function(fun = function(x) { theoretical_rtr(runtime_1pct_1, x) }, color = "#F0A202", linetype = "dotted") +
   geom_label(data = min_rtr, aes(label = rtr), vjust = -0.3, hjust = 0.35, show.legend = FALSE) +
   geom_label(data = max_rtr, aes(label = rtr), vjust = 1.3, hjust = 0.2, show.legend = FALSE) +
-  scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format x-axis
-  scale_y_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format x-axis
+  scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +
+  scale_y_log10(labels = trans_format("log10", math_format(10^.x))) +
   scale_color_manual(values = palette2()) +
-  xlab("# Processes") +
+  xlab("Number of processes") +
   ylab("Real Time Ratio") +
   labs(color = "Setup") +
   ggtitle("Real Time Ratio for benchmark runs") +
@@ -170,14 +161,13 @@ p1 <- ggplot(combined_timings, aes(x = size, y = rtr, color = as.factor(name))) 
   theme(legend.position = "inside",
         legend.justification = c(0.98, 0.02),
         legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
-        #text = element_text(family="Roboto Slab"),
-        plot.title = element_text(size = 12, face = "bold"),  # Set plot title to 8pt
-        axis.title.x = element_text(size = 10),  # Set x-axis title to 8pt
-        axis.title.y = element_text(size = 10),  # Set y-axis title to 8pt
-        axis.text.x = element_text(size = 10),  # Set x-axis text to 8pt
-        axis.text.y = element_text(size = 10),  # Set y-axis text to 8pt
-        legend.title = element_text(size = 10, face = "bold"),  # Set legend title to 8pt
-        legend.text = element_text(size = 10))  # Sets legend at the bottom of the plot
+        plot.title = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10),
+        axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        legend.title = element_text(size = 10, face = "bold"),
+        legend.text = element_text(size = 10))
 
 max_speedup <- combined_timings %>%
   group_by(name) %>%
@@ -199,14 +189,13 @@ p2 <- ggplot(combined_timings, aes(x = size, y = speedup, color = name)) +
   theme(legend.position = "right",
         legend.justification = c(0.98, 0.98),
         legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
-        #text = element_text(family="Roboto Slab"),
-        plot.title = element_text(size = 12, face = "bold"),  # Set plot title to 8pt
-        axis.title.x = element_text(size = 10),  # Set x-axis title to 8pt
-        axis.title.y = element_text(size = 10),  # Set y-axis title to 8pt
-        axis.text.x = element_text(size = 10),  # Set x-axis text to 8pt
-        axis.text.y = element_text(size = 10),  # Set y-axis text to 8pt
-        legend.title = element_text(size = 10, face = "bold"),  # Set legend title to 8pt
-        legend.text = element_text(size = 10))  # Sets legend at the bottom of the plot
+        plot.title = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10),
+        axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        legend.title = element_text(size = 10, face = "bold"),
+        legend.text = element_text(size = 10))
 p12 <- p1 +
   p2 +
   plot_layout(ncol = 2, guides = "collect") & theme(legend.position = "right", legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"))
@@ -214,6 +203,81 @@ p12
 ggsave("rtr-speedup.pdf", plot = p12, device = "pdf", width = 240, height = 100, units = "mm")
 ggsave("rtr-speedup.png", plot = p12, device = "png", width = 240, height = 100, units = "mm")
 
+#---------------------- Plot comparison between protoype, QSim and Mobility ---------------
+combined_comparison_timings <- bind_rows(
+  timings_qsim_10pct,
+  timings_10pct,
+  timings_mobiliti()
+)
+
+max_rtr_comparison <- combined_comparison_timings %>%
+  group_by(name) %>%
+  filter(rtr == max(rtr)) %>%
+  mutate(rtr = round(rtr, 0))
+min_rtr_comparison <- combined_comparison_timings %>%
+  group_by(name) %>%
+  filter(rtr == min(rtr)) %>%
+  mutate(rtr = round(rtr, 0))
+max_speedup_comparison <- combined_comparison_timings %>%
+  group_by(name) %>%
+  filter(speedup == max(speedup)) %>%
+  mutate(speedup = round(speedup, 1))
+comparison_palette <- c("#044B7F", "#FF0000", "#F0A202")
+
+p1 <- ggplot(combined_comparison_timings, aes(x = size, y = rtr, color = as.factor(name))) +
+  geom_line() +
+  geom_point() +
+  geom_label(data = min_rtr_comparison, aes(label = rtr), vjust = -0.3, hjust = 0.35, show.legend = FALSE) +
+  geom_label(data = max_rtr_comparison, aes(label = rtr), vjust = 1.3, hjust = 0.2, show.legend = FALSE) +
+  scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format x-axis
+  scale_y_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format x-axis
+  scale_color_manual(values = comparison_palette) +
+  xlab("Number of processes") +
+  ylab("Real Time Ratio") +
+  labs(color = "Implementation") +
+  ggtitle("RTR Comparison") +
+  theme_light(base_size = 10) +
+  theme(legend.position = "inside",
+        legend.justification = c(0.98, 0.02),
+        legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
+        plot.title = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10),
+        axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        legend.title = element_text(size = 10, face = "bold"),
+        legend.text = element_text(size = 10))
+
+p2 <- ggplot(combined_comparison_timings, aes(x = size, y = speedup, color = name)) +
+  geom_line() +
+  geom_point() +
+  geom_label(data = max_speedup_comparison, aes(label = speedup), vjust = 1.3, hjust = 0.5, show.legend = FALSE) +
+  scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format x-axis
+  scale_y_log10(labels = trans_format("log10", math_format(10^.x))) +
+  scale_color_manual(values = comparison_palette) +
+  xlab("Number of processes") +
+  ylab("Speedup") +
+  labs(color = "Implementation") +
+  ggtitle("Speedup Comparison") +
+  theme_light(base_size = 10) +
+  theme(legend.position = "right",
+        legend.justification = c(0.98, 0.98),
+        legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
+        plot.title = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10),
+        axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        legend.title = element_text(size = 10, face = "bold"),
+        legend.text = element_text(size = 10))
+p12 <- p1 +
+  p2 +
+  plot_layout(ncol = 2, guides = "collect") & theme(legend.position = "right", legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"))
+p12
+ggsave("compare-rtr-speedup.pdf", plot = p12, device = "pdf", width = 240, height = 100, units = "mm")
+ggsave("compare-rtr-speedup.png", plot = p12, device = "png", width = 240, height = 100, units = "mm")
+
+#------------------------- Plot aggregated runtimes of algorithm parts ------------------------
 work <- tracing_10pct %>%
   filter(func %in% work_filter) %>%
   pivot_wider(names_from = func, values_from = duration) %>%
@@ -328,7 +392,7 @@ combined_plot
 ggsave("acc_runtimes.pdf", plot = combined_plot, device = "pdf", width = 240, height = 100, units = "mm")
 ggsave("acc_runtimes.png", plot = combined_plot, device = "png", width = 240, height = 100, units = "mm")
 
-neighbor_data <- read_csv("/Users/janek/hlrn/strong-scaling/rvr/rvr-0.0pct/input/rvr-0.0pct.neighbors.csv") %>%
+neighbor_data <- read_csv("/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/scaling-runtimes/instrument/rvr-0.0pct/input/rvr-0.0pct.neighbors.csv") %>%
   group_by(size) %>%
   summarize(mean_neighbors = mean(neighbors), median_neighbors = median(neighbors), max_neighbors = max(neighbors), min_neighbors = min(neighbors), .groups = "drop")
 
