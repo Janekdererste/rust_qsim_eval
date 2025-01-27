@@ -59,7 +59,7 @@ tracing_0pct <- read_binary_tracing_files(
   on_load = on_load_tracing, parallel = TRUE
 )
 
-#--------------- Read timing data ----------------
+#-------------- Read timing data ----------------
 timings_0pct <- read_binary_tracing_files(
   "/Users/janek/Documents/writing/RustQSim/data-files-nextcloud/instrumenting/scaling-runtimes/instrument/rvr-0.0pct",
 ) %>%
@@ -121,7 +121,7 @@ combined_timings <- bind_rows(
   timings_10pct,
 )
 
-#----------------- Plot RTR and Speedups Benchmark -----------------
+#-------------- Plot RTR and Speedups Benchmark -----------------
 max_rtr <- combined_timings %>%
   group_by(name) %>%
   filter(name == "Prototype 10%" |
@@ -148,6 +148,7 @@ combined_timings <- combined_timings %>%
 p1 <- ggplot(combined_timings, aes(x = size, y = rtr, color = as.factor(name))) +
   geom_line() +
   geom_point() +
+  #stat_function(fun = func_2, color = "#F0A202") +
   geom_label(data = min_rtr, aes(label = rtr), vjust = -0.3, hjust = 0.35, show.legend = FALSE) +
   geom_label(data = max_rtr, aes(label = rtr), vjust = 1.3, hjust = 0.2, show.legend = FALSE) +
   scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +
@@ -168,6 +169,7 @@ p1 <- ggplot(combined_timings, aes(x = size, y = rtr, color = as.factor(name))) 
         axis.text.y = element_text(size = 10),
         legend.title = element_text(size = 10, face = "bold"),
         legend.text = element_text(size = 10))
+p1
 
 max_speedup <- combined_timings %>%
   group_by(name) %>%
@@ -203,7 +205,7 @@ p12
 ggsave("rtr-speedup.pdf", plot = p12, device = "pdf", width = 240, height = 100, units = "mm")
 ggsave("rtr-speedup.png", plot = p12, device = "png", width = 240, height = 100, units = "mm")
 
-#---------------------- Plot comparison between protoype, QSim and Mobility ---------------
+#-------------- Plot comparison between protoype, QSim and Mobility ---------------
 combined_comparison_timings <- bind_rows(
   timings_qsim_10pct,
   timings_10pct,
@@ -277,7 +279,7 @@ p12
 ggsave("compare-rtr-speedup.pdf", plot = p12, device = "pdf", width = 240, height = 100, units = "mm")
 ggsave("compare-rtr-speedup.png", plot = p12, device = "png", width = 240, height = 100, units = "mm")
 
-#------------------------- Plot aggregated runtimes of algorithm parts ------------------------
+#-------------- Plot aggregated runtimes of algorithm parts ------------------------
 work <- tracing_10pct %>%
   filter(func %in% work_filter) %>%
   pivot_wider(names_from = func, values_from = duration) %>%
@@ -297,6 +299,8 @@ comm <- tracing_10pct %>%
   mutate(phase = "Max. Communication") %>%
   group_by(sim_time, size, phase) %>%
   summarize(dur = max(duration), .groups = 'drop')
+
+print(comm)
 
 work_comm <- bind_rows(work, comm) %>%
   filter(size %in% c(16, 64, 1024)) %>%
@@ -333,6 +337,92 @@ p <- ggplot(work_comm, aes(sim_time_posix, dur / 1e3, color = as.factor(phase)))
 ggsave("work-wait-hlrn.pdf", plot = p, device = "pdf", width = 210, height = 100, units = "mm")
 ggsave("work-wait-hlrn.png", plot = p, device = "png", width = 210, height = 100, units = "mm")
 p
+
+#-------------- Fit runtimes --------------
+
+fit <- function(p) {
+  t_cmp <- 231 / p
+  n_msg <- 2 * (10.5 * sqrt(p) - 1) * (sqrt(p) - 1) / p
+  t_com <- n_msg * 2e-6 * 129600
+  rtr <- 129600 / (t_com + t_cmp)
+  return(rtr)
+}
+
+large_scenario <- function(p) {
+  t_cmp <- 2310 / p
+  n_msg <- 2 * (10.5 * sqrt(p) - 1) * (sqrt(p) - 1) / p
+  t_com <- n_msg * 2e-6 * 129600
+  rtr <- 129600 / (t_com + t_cmp)
+  return(rtr)
+}
+
+fast_hardware <- function(p) {
+  t_cmp <- 231 / p
+  n_msg <- 2 * (10.5 * sqrt(p) - 1) * (sqrt(p) - 1) / p
+  t_com <- n_msg * 2e-7 * 129600
+  rtr <- 129600 / (t_com + t_cmp)
+  return(rtr)
+}
+
+slow_hardware <- function(p) {
+  t_cmp <- 231 / p
+  n_msg <- 2 * (10.5 * sqrt(p) - 1) * (sqrt(p) - 1) / p
+  t_com <- n_msg * 1e-5 * 129600
+  rtr <- 129600 / (t_com + t_cmp)
+  return(rtr)
+}
+
+fewer_neighbors <- function(p) {
+  t_cmp <- 231 / p
+  n_msg <- 2 * (3 * sqrt(p) - 1) * (sqrt(p) - 1) / p
+  t_com <- n_msg * 2e-6 * 129600
+  rtr <- 129600 / (t_com + t_cmp)
+  return(rtr)
+}
+
+p <- ggplot(timings_10pct, aes(x = size, y = rtr, color = as.factor(name))) +
+  geom_line() +
+  geom_point() +
+  stat_function(fun = fit, aes(color = "Max. Neighbor Fit"), linetype = "dashed") +
+  stat_function(fun = slow_hardware, aes(color = "Ethernet Comm."), linetype = "dotdash") +
+  stat_function(fun = large_scenario, aes(color = "Large Scenario"), linetype = "dotted") +
+  stat_function(fun = fast_hardware, aes(color = "Future Comm."), linetype = "dashed") +
+  stat_function(fun = fewer_neighbors, aes(color = "Fewer Neighbors"), linetype = "longdash") +
+  scale_x_log10(limits = c(1, 100000), labels = trans_format("log10", math_format(10^.x))) +
+  scale_y_log10(labels = trans_format("log10", math_format(10^.x))) +
+  # Customize colors and linetypes for the legend
+  scale_color_manual(
+    values = c("Max. Neighbor Fit" = red(),
+               "Large Scenario" = "#044B7F",
+               "Future Comm." = "#F0A202",
+               "Ethernet Comm." = "black",
+               "Fewer Neighbors" = "#00A08A",
+               "Prototype 10%" = red()),
+    name = "Scenario"
+  ) +
+  xlab("Number of processes") +
+  ylab("Real Time Ratio") +
+  labs(color = "Series", linetype = "Series") +
+  guides(color = guide_legend(override.aes = list(linetype = "dashed"))) +
+  ggtitle("Prediction of Real Time Ratios") +
+  theme_light(base_size = 10) +
+  theme(
+    #legend.position = "inside",
+    # legend.justification = c(0.98, 0.02),
+    #legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
+    legend.box.margin = margin(r = 4),
+    plot.title = element_text(size = 12, face = "bold"),
+    axis.title.x = element_text(size = 10),
+    axis.title.y = element_text(size = 10),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10),
+    legend.title = element_text(size = 10, face = "bold"),
+    legend.text = element_text(size = 10))
+p
+ggsave("predictions.pdf", plot = p, device = "pdf", width = 185, height = 100, units = "mm")
+ggsave("predictions.png", plot = p, device = "png", width = 185, height = 100, units = "mm")
+
+#-------------- Plot accumulated runtimes ------------------
 
 acc_runtimes <- tracing_10pct %>%
   filter(func %in% work_filter | func %in% comm_filter) %>%

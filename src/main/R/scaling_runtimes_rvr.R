@@ -62,10 +62,14 @@ func <- function(p) {
   return(t_cmp + t_lt)
 }
 
+func_2 <- function(p) {
+  return(20 * (1 - e^-p))
+}
+
 p <- ggplot(strong_scaling, aes(x = size, y = mean_dur / 1e9, color = name)) +
   geom_line() +
   geom_point() +
-  stat_function(fun = func, color = "#F0A202") +
+  stat_function(fun = func_2, color = "#F0A202") +
   #geom_label(data = speedup_001, aes(label = mean_dur / 1e9)) +
   labs(color = "Scenario Size in %") +
   scale_x_log10() +
