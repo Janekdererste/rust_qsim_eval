@@ -149,8 +149,8 @@ p1 <- ggplot(combined_timings, aes(x = size, y = rtr, color = as.factor(name))) 
   geom_line() +
   geom_point() +
   #stat_function(fun = func_2, color = "#F0A202") +
-  geom_label(data = min_rtr, aes(label = rtr), vjust = -0.3, hjust = 0.35, show.legend = FALSE) +
-  geom_label(data = max_rtr, aes(label = rtr), vjust = 1.3, hjust = 0.2, show.legend = FALSE) +
+  geom_label(data = min_rtr, aes(label = comma(rtr)), vjust = -0.3, hjust = 0.35, size = 3.5, show.legend = FALSE) +
+  geom_label(data = max_rtr, aes(label = comma(rtr)), vjust = 1.3, hjust = 0.25, size = 3.5, show.legend = FALSE) +
   scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +
   scale_y_log10(labels = trans_format("log10", math_format(10^.x))) +
   scale_color_manual(values = palette2()) +
@@ -158,17 +158,12 @@ p1 <- ggplot(combined_timings, aes(x = size, y = rtr, color = as.factor(name))) 
   ylab("Real Time Ratio") +
   labs(color = "Setup") +
   ggtitle("Real Time Ratio for benchmark runs") +
-  theme_light(base_size = 10) +
+  theme_light(base_size = 11) +
   theme(legend.position = "inside",
         legend.justification = c(0.98, 0.02),
         legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
-        plot.title = element_text(size = 12, face = "bold"),
-        axis.title.x = element_text(size = 10),
-        axis.title.y = element_text(size = 10),
-        axis.text.x = element_text(size = 10),
-        axis.text.y = element_text(size = 10),
-        legend.title = element_text(size = 10, face = "bold"),
-        legend.text = element_text(size = 10))
+        plot.title = element_text(face = "bold"),
+        legend.title = element_text(face = "bold"))
 p1
 
 max_speedup <- combined_timings %>%
@@ -180,27 +175,22 @@ max_speedup <- combined_timings %>%
 p2 <- ggplot(combined_timings, aes(x = size, y = speedup, color = name)) +
   geom_line() +
   geom_point() +
-  geom_label(data = max_speedup, aes(label = speedup), vjust = 1.3, hjust = 0.5, show.legend = FALSE) +
+  geom_label(data = max_speedup, aes(label = speedup), vjust = 1.3, hjust = 0.5, size = 3.5, show.legend = FALSE) +
   scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format x-axis
   scale_color_manual(values = palette2()) +
   xlab("Number of processes") +
   ylab("Speedup") +
   labs(color = "Setup") +
   ggtitle("Speedups for benchmark runs") +
-  theme_light(base_size = 10) +
+  theme_light(base_size = 11) +
   theme(legend.position = "right",
         legend.justification = c(0.98, 0.98),
         legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
-        plot.title = element_text(size = 12, face = "bold"),
-        axis.title.x = element_text(size = 10),
-        axis.title.y = element_text(size = 10),
-        axis.text.x = element_text(size = 10),
-        axis.text.y = element_text(size = 10),
-        legend.title = element_text(size = 10, face = "bold"),
-        legend.text = element_text(size = 10))
+        plot.title = element_text(face = "bold"),
+        legend.title = element_text(face = "bold"))
 p12 <- p1 +
   p2 +
-  plot_layout(ncol = 2, guides = "collect") & theme(legend.position = "right", legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"))
+  plot_layout(ncol = 2, guides = "collect") & theme(legend.position = "right")
 p12
 ggsave("rtr-speedup.pdf", plot = p12, device = "pdf", width = 240, height = 100, units = "mm")
 ggsave("rtr-speedup.png", plot = p12, device = "png", width = 240, height = 100, units = "mm")
@@ -229,8 +219,8 @@ comparison_palette <- c("#044B7F", "#FF0000", "#F0A202")
 p1 <- ggplot(combined_comparison_timings, aes(x = size, y = rtr, color = as.factor(name))) +
   geom_line() +
   geom_point() +
-  geom_label(data = min_rtr_comparison, aes(label = rtr), vjust = -0.3, hjust = 0.35, show.legend = FALSE) +
-  geom_label(data = max_rtr_comparison, aes(label = rtr), vjust = 1.3, hjust = 0.2, show.legend = FALSE) +
+  geom_label(data = min_rtr_comparison, aes(label = comma(rtr)), vjust = -0.3, hjust = 0.35, size = 3.5, show.legend = FALSE) +
+  geom_label(data = max_rtr_comparison, aes(label = comma(rtr)), vjust = 1.3, hjust = 0.2, size = 3.5, show.legend = FALSE) +
   scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format x-axis
   scale_y_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format x-axis
   scale_color_manual(values = comparison_palette) +
@@ -238,22 +228,17 @@ p1 <- ggplot(combined_comparison_timings, aes(x = size, y = rtr, color = as.fact
   ylab("Real Time Ratio") +
   labs(color = "Implementation") +
   ggtitle("RTR Comparison") +
-  theme_light(base_size = 10) +
+  theme_light(base_size = 11) +
   theme(legend.position = "inside",
         legend.justification = c(0.98, 0.02),
         legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
-        plot.title = element_text(size = 12, face = "bold"),
-        axis.title.x = element_text(size = 10),
-        axis.title.y = element_text(size = 10),
-        axis.text.x = element_text(size = 10),
-        axis.text.y = element_text(size = 10),
-        legend.title = element_text(size = 10, face = "bold"),
-        legend.text = element_text(size = 10))
+        plot.title = element_text(face = "bold"),
+        legend.title = element_text(face = "bold"))
 
 p2 <- ggplot(combined_comparison_timings, aes(x = size, y = speedup, color = name)) +
   geom_line() +
   geom_point() +
-  geom_label(data = max_speedup_comparison, aes(label = speedup), vjust = 1.3, hjust = 0.5, show.legend = FALSE) +
+  geom_label(data = max_speedup_comparison, aes(label = comma(speedup, accuracy = 0.1)), vjust = 1.3, hjust = 0.5, size = 3.5, show.legend = FALSE) +
   scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +  # Format x-axis
   scale_y_log10(labels = trans_format("log10", math_format(10^.x))) +
   scale_color_manual(values = comparison_palette) +
@@ -261,20 +246,15 @@ p2 <- ggplot(combined_comparison_timings, aes(x = size, y = speedup, color = nam
   ylab("Speedup") +
   labs(color = "Implementation") +
   ggtitle("Speedup Comparison") +
-  theme_light(base_size = 10) +
+  theme_light(base_size = 11) +
   theme(legend.position = "right",
         legend.justification = c(0.98, 0.98),
         legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
-        plot.title = element_text(size = 12, face = "bold"),
-        axis.title.x = element_text(size = 10),
-        axis.title.y = element_text(size = 10),
-        axis.text.x = element_text(size = 10),
-        axis.text.y = element_text(size = 10),
-        legend.title = element_text(size = 10, face = "bold"),
-        legend.text = element_text(size = 10))
+        plot.title = element_text(face = "bold"),
+        legend.title = element_text(face = "bold"))
 p12 <- p1 +
   p2 +
-  plot_layout(ncol = 2, guides = "collect") & theme(legend.position = "right", legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"))
+  plot_layout(ncol = 2, guides = "collect") & theme(legend.position = "right")
 p12
 ggsave("compare-rtr-speedup.pdf", plot = p12, device = "pdf", width = 240, height = 100, units = "mm")
 ggsave("compare-rtr-speedup.png", plot = p12, device = "png", width = 240, height = 100, units = "mm")
@@ -323,19 +303,16 @@ p <- ggplot(work_comm, aes(sim_time_posix, dur / 1e3, color = as.factor(phase)))
   labs(color = "Phase") +
   guides(color = guide_legend(override.aes = list(size = 2, alpha = 1.0, shape = 19))) +
   scale_color_manual(values = palette()) +
-  theme_light(base_size = 10) +
+  theme_light(base_size = 11) +
   theme(legend.position = "inside",
         legend.justification = c(0.99, 0.95),
         legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
-        plot.title = element_text(size = 12, face = "bold"),  # Set plot title to 8pt
-        axis.title.x = element_text(size = 10),  # Set x-axis title to 8pt
-        axis.title.y = element_text(size = 10),  # Set y-axis title to 8pt
-        axis.text.x = element_text(size = 10, angle = 45, hjust = 1),  # Set x-axis text to 8pt
-        axis.text.y = element_text(size = 10),  # Set y-axis text to 8pt
-        legend.title = element_text(size = 10, face = "bold"),  # Set legend title to 8pt
-        legend.text = element_text(size = 10))  # Sets legend at the bottom of the plot
-ggsave("work-wait-hlrn.pdf", plot = p, device = "pdf", width = 210, height = 100, units = "mm")
-ggsave("work-wait-hlrn.png", plot = p, device = "png", width = 210, height = 100, units = "mm")
+        plot.title = element_text(face = "bold"),
+        axis.text.x = element_text(size = 11, angle = 45, hjust = 1),  # Set x-axis text to 8pt
+        legend.title = element_text(size = 11, face = "bold"))  # Set legend title to 8pt
+# legend.text = element_text(size = 11))  # Sets legend at the bottom of the plot
+ggsave("work-wait-hlrn.pdf", plot = p, device = "pdf", width = 240, height = 100, units = "mm")
+ggsave("work-wait-hlrn.png", plot = p, device = "png", width = 240, height = 100, units = "mm")
 p
 
 #-------------- Fit runtimes --------------
@@ -405,19 +382,11 @@ p <- ggplot(timings_10pct, aes(x = size, y = rtr, color = as.factor(name))) +
   labs(color = "Series", linetype = "Series") +
   guides(color = guide_legend(override.aes = list(linetype = "dashed"))) +
   ggtitle("Prediction of Real Time Ratios") +
-  theme_light(base_size = 10) +
+  theme_light(base_size = 11) +
   theme(
-    #legend.position = "inside",
-    # legend.justification = c(0.98, 0.02),
-    #legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
     legend.box.margin = margin(r = 4),
-    plot.title = element_text(size = 12, face = "bold"),
-    axis.title.x = element_text(size = 10),
-    axis.title.y = element_text(size = 10),
-    axis.text.x = element_text(size = 10),
-    axis.text.y = element_text(size = 10),
-    legend.title = element_text(size = 10, face = "bold"),
-    legend.text = element_text(size = 10))
+    plot.title = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"))
 p
 ggsave("predictions.pdf", plot = p, device = "pdf", width = 185, height = 100, units = "mm")
 ggsave("predictions.png", plot = p, device = "png", width = 185, height = 100, units = "mm")
@@ -438,16 +407,11 @@ p1 <- ggplot(ordered_data, aes(x = as.factor(size), y = mean_dur / 1e3, fill = a
   labs(fill = "Phase") +
   ggtitle("Algorithm phases – 10% sample") +
   scale_fill_manual(values = c(yellows(), blues())) +
-  theme_light(base_size = 10) +
+  theme_light(base_size = 11) +
   theme(
     legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"),
-    plot.title = element_text(size = 12, face = "bold"),  # Set plot title to 8pt
-    axis.title.x = element_text(size = 10),  # Set x-axis title to 8pt
-    axis.title.y = element_text(size = 10),  # Set y-axis title to 8pt
-    axis.text.x = element_text(size = 10),  # Set x-axis text to 8pt
-    axis.text.y = element_text(size = 10),  # Set y-axis text to 8pt
-    legend.title = element_text(size = 10, face = "bold"),  # Set legend title to 8pt
-    legend.text = element_text(size = 10))  # Sets legend at the bottom of the plot
+    plot.title = element_text(face = "bold"),  # Set plot title to 8pt
+    legend.title = element_text(face = "bold"))  # Set legend title to 8pt
 
 acc_runtimes_dry <- tracing_0pct %>%
   filter(func %in% work_filter | func %in% comm_filter) %>%
@@ -464,20 +428,14 @@ p2 <- ggplot(ordered_data_dry, aes(x = as.factor(size), y = mean_dur / 1e3, fill
   labs(fill = "Phase") +
   ggtitle("Algorithm phases – 0% sample") +
   scale_fill_manual(values = c(yellows(), blues())) +
-  theme_light(base_size = 8) +
-  theme_light(base_size = 10) +
+  theme_light(base_size = 11) +
   theme(
     legend.justification = c(0.5, 0.5),
-    plot.title = element_text(size = 12, face = "bold"),  # Set plot title to 8pt
-    axis.title.x = element_text(size = 10),  # Set x-axis title to 8pt
-    axis.title.y = element_text(size = 10),  # Set y-axis title to 8pt
-    axis.text.x = element_text(size = 10),  # Set x-axis text to 8pt
-    axis.text.y = element_text(size = 10),  # Set y-axis text to 8pt
-    legend.title = element_text(size = 10, face = "bold"),  # Set legend title to 8pt
-    legend.text = element_text(size = 10))  # Sets legend at the bottom of the plot
+    plot.title = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"))
 combined_plot <- p1 +
   p2 +
-  plot_layout(ncol = 2, guides = "collect") & theme(legend.position = "right", legend.box.background = element_rect(fill = "#FFFFFF", color = "gray"))
+  plot_layout(ncol = 2, guides = "collect") & theme(legend.position = "right")
 combined_plot
 ggsave("acc_runtimes.pdf", plot = combined_plot, device = "pdf", width = 240, height = 100, units = "mm")
 ggsave("acc_runtimes.png", plot = combined_plot, device = "png", width = 240, height = 100, units = "mm")
